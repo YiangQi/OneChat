@@ -85,5 +85,9 @@ Inside the `webcache` directory there is a `WebView` folder which stores data in
 - OneChat uses the third-party library [QCefView](https://github.com/CefView/QCefView) as the browser engine and includes some adjustments for certain QCefView features, using CEF version 122.
   You can refer to the forked repository here: https://github.com/YiangQi/QCefView/tree/onechat (branch `onechat`).
   The `qcefview` under `3rdparty` in OneChat was built from that fork.
-- At runtime, it is necessary to package the corresponding CefView module in the debug/release directory; you can directly copy it from GitHub.
+- During runtime, you need to place the corresponding CefView module in the debug/release directory. The module folder must be named "CefView" (case-sensitive). You can directly copy it from GitHub：
+
+  + windows x64 debug cefview：https://github.com/YiangQi/OneChat/releases/tag/v0.0.1/CefView_win_x64_debug.zip
+  + windows x64 release cefview：https://github.com/YiangQi/OneChat/releases/tag/v0.0.1/CefView_win_x64_release.zip
+
 - If you want to run the release version, please first copy the build/debug/onlinedirectory to the build/releasedirectory; otherwise, the website list will be missing at runtime.

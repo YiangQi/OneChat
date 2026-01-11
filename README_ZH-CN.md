@@ -86,7 +86,11 @@ webcache 目录下有个 WebView 文件夹，里面会按照大模型网站域�
 - OneChat 引用了第三方库 [QCefView](https://github.com/CefView/QCefView)： https://github.com/CefView/QCefView 作为浏览器引擎，并针对 QCefView 一些功能细节做了调整，采用 cef122 版本。
 具体可参考该仓库 fork 地址：https://github.com/YiangQi/QCefView/tree/onechat , onechat 分支。
 OneChat 3rdparty 目录下的 qcefview 由该 fork 仓库编译。 
-- 运行时需要在 debug/release 目录下打包对应的 CefView 模块，您可以直接在 github 进行拷贝；
+- 运行时需要在 debug/release 目录下放置对应的 CefView 模块， 模块目录需要命名为 CefView (大小写敏感)，您可以直接在 github 进行拷贝:
+
+  + windows x64 debug cefview：https://github.com/YiangQi/OneChat/releases/tag/v0.0.1/CefView_win_x64_debug.zip
+  + windows x64 release cefview：https://github.com/YiangQi/OneChat/releases/tag/v0.0.1/CefView_win_x64_release.zip
+
 - 如果想要运行 release 版本，请先将 build/debug/online 目录拷贝到 build/release 目录下，否则运行时将不存在网站列表。
 
 
