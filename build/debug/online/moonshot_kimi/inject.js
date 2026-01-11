@@ -126,13 +126,13 @@ function onSidebarVisibleChanged(visible) {
     }
     if (visible) {
         const sidebar = document.querySelector('div[class*="sidebar-placeholder"]');
-        if (sidebar && sidebar.classList.contains("fold")) {
+        if (sidebar && !sidebar.classList.contains("fold")) {
             expandBtn.click();
         }
         return true;
     } else {
         const sidebar = document.querySelector('div[class*="sidebar-placeholder"]');
-        if (sidebar && !sidebar.classList.contains("fold")) {
+        if (sidebar && sidebar.classList.contains("fold")) {
             expandBtn.click();
         }
         return true;
