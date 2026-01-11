@@ -3,7 +3,7 @@
   <p align="center"><strong>Ask once, get answers from many</strong></p>
 
 
-[English] | [简体中文](README_ZH-CN.md)
+English | [简体中文](README_ZH-CN.md)
 
 </div>
 
