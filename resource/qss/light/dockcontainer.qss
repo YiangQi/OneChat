@@ -1,0 +1,195 @@
+DockWidget {
+    background-color: #f7f7f7;
+    border: none;
+}
+
+#ShadowWidget {
+    background-color: #aaa9cef4;
+}
+
+#TransparentWidgt {
+    background-color: transparent;
+}
+
+DockWidget QStackedWidget {
+    border: none;
+    border-top: 8px solid qlineargradient(x1:0, y1:0.5, x2:0, y2:1, 
+                                        stop:0 #ffffff, stop:1 #dddddd);
+}
+
+QScrollArea {
+    min-height: 32px;
+    max-height: 32px;
+    background-color: transparent;
+    border: none;
+}
+
+DockWidgetTabBar {
+    min-height: 32px;
+    max-height: 32px;
+    background-color: transparent;
+    border: none;
+    font-size: 12px;
+}
+
+DockWidgetTabBar::tab {
+    min-height: 32px;
+    max-height: 32px;
+    background-color: #cdcdcd;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    padding: 0px 10px;
+    padding-bottom: 2px;
+    /* margin-top: 4px; */
+    border: 1px solid #bcbcbc;
+    border-bottom: none;
+    color: gray;
+}
+
+DockWidgetTabBar::tab:selected {
+    background-color: #ffffff;
+    border: 1px solid #dddddd;
+    border-bottom: none;
+    color: #000000;
+}
+
+DockWidgetTabBar::close-button {
+    image: url(":/img/light/close");
+}
+
+DockWidgetTabBar::close-button:hover {
+    background-color: gray;
+    border-radius: 5px;
+}
+
+DockWidgetCornerWidget {
+    border: none;
+    background-color: transparent;
+    min-height: 32px;
+    max-height: 32px;
+}
+
+DockWidgetCornerWidget QToolButton {
+    min-height: 20px;
+    max-height: 20px;
+    min-width: 20px;
+    max-width: 20px;
+    border-radius: 6px;
+    qproperty-iconSize: 16px 16px;
+    qproperty-toolButtonStyle: ToolButtonIconOnly;
+}
+
+DockWidgetCornerWidget #LayoutButton {
+    qproperty-icon: url(":/img/light/layout");
+}
+
+DockWidgetCornerWidget #FloatButton {
+    qproperty-icon: url(":/img/light/float");
+}
+
+DockWidgetCornerWidget QToolButton:hover {
+    background-color: gray;
+}
+
+#RefrestTabButton {
+    min-width: 20px;
+    max-width: 20px;
+    min-height: 20px;
+    max-height: 20px;
+    qproperty-iconSize: 16px 16px;
+    qproperty-toolButtonStyle: ToolButtonIconOnly;
+    qproperty-icon: url(":/img/light/refresh_btn");
+}
+
+#CloseTabButton {
+    min-width: 20px;
+    max-width: 20px;
+    min-height: 20px;
+    max-height: 20px;
+    qproperty-iconSize: 20px 20px;
+    qproperty-toolButtonStyle: ToolButtonIconOnly;
+    qproperty-icon: url(":/img/light/close");
+}
+
+#RefrestTabButton:hover,
+#CloseTabButton:hover {
+    border-radius: 4px;
+    background-color: #cdcdcd;
+}
+
+#IconTabButton {
+    padding-left: 10px;
+    min-width: 16px;
+    max-width: 16px;
+    min-height:16px;
+    max-height: 16px;
+}
+
+/* === 滚动条通用样式 === */
+QScrollBar::vertical {
+    width: 4px;
+    margin: 0px, 0px, 0px, 0px;
+    background-color: transparent;
+}
+
+QScrollBar::horizontal {
+    height: 4px;
+    margin: 0px, 0px, 0px, 0px;
+    background-color: transparent;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #dbdbdb;
+    border-radius: 2px;
+    width: 4px;
+    min-height: 20px;
+    border: 1px solid #dbdbdb;
+}
+
+QScrollBar::handle:horizontal {
+    background-color: #dbdbdb;
+    border-radius: 2px;
+    height: 4px;
+    min-width: 20px;
+    border: 1px solid #dbdbdb;
+}
+
+QScrollBar::add-page, QScrollBar::sub-page {
+    background: none;
+}
+
+QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical,
+QScrollBar::sub-line:horizontal, QScrollBar::add-line:horizontal {
+    background-color: transparent;
+    width: 0px;
+    height: 0px;
+}
+
+QMenu {
+	background-color: #ffffff;
+	font-size: 14px;
+    font-family: "Arial";
+    font-weight: medium;
+    border: 1px solid #dddddd;
+    padding: 5px;
+    color: #000000;
+    margin: 2px;
+    border-radius: 3px;
+}
+
+QMenu::item
+{
+	height: 30px;
+	background-color:transparent;
+    margin: 5px 0px;
+    border-radius: 3px;
+}
+
+QMenu::item:selected {
+    background-color: #0060c0;
+    color: #ffffff;
+}
+
+QMenu::item:disabled {
+    color: gray;
+}

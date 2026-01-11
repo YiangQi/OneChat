@@ -1,0 +1,80 @@
+<RCC>
+    <qresource prefix="/qss/dark">
+        <file alias="mainwindow.qss">qss/dark/mainwindow.qss</file>
+        <file alias="sidebartitle.qss">qss/dark/sidebartitle.qss</file>
+        <file alias="onlinepanel.qss">qss/dark/onlinepanel.qss</file>
+        <file alias="inputpanel.qss">qss/dark/inputpanel.qss</file>
+        <file alias="dockcontainer.qss">qss/dark/dockcontainer.qss</file>
+        <file alias="settingsdlg.qss">qss/dark/settingsdlg.qss</file>
+    </qresource>
+    <qresource prefix="/qss/light">
+        <file alias="mainwindow.qss">qss/light/mainwindow.qss</file>
+        <file alias="sidebartitle.qss">qss/light/sidebartitle.qss</file>
+        <file alias="onlinepanel.qss">qss/light/onlinepanel.qss</file>
+        <file alias="dockcontainer.qss">qss/light/dockcontainer.qss</file>
+        <file alias="inputpanel.qss">qss/light/inputpanel.qss</file>
+        <file alias="settingsdlg.qss">qss/light/settingsdlg.qss</file>
+    </qresource>
+    <qresource prefix="/font">
+        <file alias="SourceHanSans.ttf">font/SourceHanSans-Medium.ttf</file>
+    </qresource>
+    <qresource prefix="/img/light">
+        <file alias="sidebar_online_btn">img/light/sidebar_online_btn.png</file>
+        <file alias="close">img/light/close.png</file>
+        <file alias="float">img/light/float.png</file>
+        <file alias="layout">img/light/layout.png</file>
+        <file alias="layout_bottom">img/light/layout_bottom.png</file>
+        <file alias="layout_left">img/light/layout_left.png</file>
+        <file alias="layout_right">img/light/layout_right.png</file>
+        <file alias="layout_top">img/light/layout_top.png</file>
+        <file alias="send_btn">img/light/send_btn.png</file>
+        <file alias="add_file_btn">img/light/add_file_btn.png</file>
+        <file alias="refresh_btn">img/light/refresh_btn.png</file>
+        <file alias="keyboard_btn">img/light/keyboard_btn.png</file>
+        <file alias="sidebar_unfold_btn">img/light/sidebar_unfold_btn.png</file>
+        <file alias="user_btn">img/light/user_btn.png</file>
+        <file alias="add_image_btn">img/light/add_image_btn.png</file>
+        <file alias="settings_btn">img/light/settings_btn.png</file>
+        <file alias="arrow_down">img/light/arrow_down.png</file>
+        <file alias="checkbox_btn">img/light/checkbox_btn.png</file>
+        <file alias="checkbox_tn_disable">img/light/checkbox_btn_disable.png</file>
+        <file alias="checkbox_btn_select">img/light/checkbox_btn_select.png</file>
+        <file alias="arrow_right">img/light/arrow_right.png</file>
+        <file alias="chat_new_btn">img/light/chat_new_btn.png</file>
+        <file alias="arrow_up_btn">img/light/arrow_up_btn.png</file>
+        <file alias="arrow_down_btn">img/light/arrow_down_btn.png</file>
+    </qresource>
+    <qresource prefix="/img/dark">
+        <file alias="settings_btn">img/dark/settings_btn.png</file>
+        <file alias="sidebar_online_btn">img/dark/sidebar_online_btn.png</file>
+        <file alias="add_file_btn">img/dark/add_file_btn.png</file>
+        <file alias="add_image_btn">img/dark/add_image_btn.png</file>
+        <file alias="keyboard_btn">img/dark/keyboard_btn.png</file>
+        <file alias="sidebar_unfold_btn">img/dark/sidebar_unfold_btn.png</file>
+        <file alias="user_btn">img/dark/user_btn.png</file>
+        <file alias="send_btn">img/dark/send_btn.png</file>
+        <file alias="close">img/dark/close.png</file>
+        <file alias="float">img/dark/float.png</file>
+        <file alias="layout">img/dark/layout.png</file>
+        <file alias="layout_bottom">img/dark/layout_bottom.png</file>
+        <file alias="layout_left">img/dark/layout_left.png</file>
+        <file alias="layout_right">img/dark/layout_right.png</file>
+        <file alias="layout_top">img/dark/layout_top.png</file>
+        <file alias="refresh_btn">img/dark/refresh_btn.png</file>
+        <file alias="arrow_down">img/dark/arrow_down.png</file>
+        <file alias="arrow_right">img/dark/arrow_right.png</file>
+        <file alias="checkbox_btn">img/dark/checkbox_btn.png</file>
+        <file alias="checkbox_btn_disable">img/dark/checkbox_btn_disable.png</file>
+        <file alias="checkbox_btn_select">img/dark/checkbox_btn_select.png</file>
+        <file alias="chat_new_btn">img/dark/chat_new_btn.png</file>
+        <file alias="arrow_down_btn">img/dark/arrow_down_btn.png</file>
+        <file alias="arrow_up_btn">img/dark/arrow_up_btn.png</file>
+    </qresource>
+    <qresource prefix="/img">
+        <file alias="logo.ico">img/logo.ico</file>
+    </qresource>
+    <qresource prefix="/language">
+        <file alias="en">language/en.qm</file>
+        <file alias="zh">language/zh.qm</file>
+    </qresource>
+</RCC>

@@ -1,0 +1,200 @@
+#MainWidget {
+    border-radius: 10px;
+    border: 1px solid #cbcbcb;
+    background-color: #ffffff
+}
+
+#HeaderWidget {
+    min-height: 26px;
+    max-height: 26px;
+}
+
+#BottomWidget {
+    min-height: 40px;
+    max-height: 40px;
+}
+
+QTextEdit {
+    border: none;
+    background-color: #ffffff;
+    font-size: 14px;
+}
+
+#LoginButton {
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    border: 1px solid #dedede;
+    qproperty-iconSize: 16px 16px;
+    qproperty-toolButtonStyle: ToolButtonIconOnly;
+    qproperty-icon: url(":/img/light/user_btn");
+}
+
+#SidebarUnfoldButton {
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    border: 1px solid #dedede;
+    qproperty-iconSize: 16px 16px;
+    qproperty-toolButtonStyle: ToolButtonIconOnly;
+    qproperty-icon: url(":/img/light/sidebar_unfold_btn");
+}
+
+#ShowInputButton {
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    border: 1px solid #dedede;
+    qproperty-iconSize: 16px 16px;
+    qproperty-toolButtonStyle: ToolButtonIconOnly;
+    qproperty-icon: url(":/img/light/keyboard_btn");
+}
+
+#ChatNewButton {
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    border: 1px solid #dedede;
+    qproperty-iconSize: 16px 16px;
+    qproperty-toolButtonStyle: ToolButtonIconOnly;
+    qproperty-icon: url(":/img/light/chat_new_btn");
+}
+
+#QuestionUpButton {
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    border: 1px solid #dedede;
+    qproperty-iconSize: 16px 16px;
+    qproperty-toolButtonStyle: ToolButtonIconOnly;
+    qproperty-icon: url(":/img/light/arrow_up_btn");
+}
+
+#QuestionDownButton {
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    border: 1px solid #dedede;
+    qproperty-iconSize: 16px 16px;
+    qproperty-toolButtonStyle: ToolButtonIconOnly;
+    qproperty-icon: url(":/img/light/arrow_down_btn");
+}
+
+#DeepThinkButton,
+#WebSearchButton {
+    min-width: 100px;
+    max-width: 100px;
+    min-height: 30px;
+    max-height: 30px;
+    border-radius: 15px;
+    border: 1px solid #cdcdcd;
+    color: #232323;
+}
+
+#SendButton {
+    min-width: 36px;
+    max-width: 36px;
+    min-height: 36px;
+    max-height: 36px;
+    border-radius: 18px;
+    border: 1px solid #dedede;
+    qproperty-iconSize: 26px 26px;
+    qproperty-toolButtonStyle: ToolButtonIconOnly;
+    qproperty-icon: url(":/img/light/send_btn");
+}
+
+#AddFileButton {
+    min-width: 30px;
+    max-width: 30px;
+    min-height: 30px;
+    max-height: 30px;
+    border-radius: 15px;
+    border: 1px solid #dedede;
+    qproperty-iconSize: 18px 18px;
+    qproperty-toolButtonStyle: ToolButtonIconOnly;
+    qproperty-icon: url(":/img/light/add_file_btn");
+}
+
+#AddImageButton {
+    min-width: 30px;
+    max-width: 30px;
+    min-height: 30px;
+    max-height: 30px;
+    border-radius: 15px;
+    border: 1px solid #dedede;
+    qproperty-iconSize: 18px 18px;
+    qproperty-toolButtonStyle: ToolButtonIconOnly;
+    qproperty-icon: url(":/img/light/add_image_btn");
+}
+
+#LoginButton:hover,
+#SidebarUnfoldButton:hover,
+#ShowInputButton:hover,
+#ChatNewButton:hover,
+#QuestionUpButton:hover,
+#QuestionDownButton:hover,
+#DeepThinkButton:hover,
+#WebSearchButton:hover,
+#SendButton:hover,
+#AddFileButton:hover,
+#AddImageButton:hover {
+    background-color: #f2f2f2;
+}
+
+#DeepThinkButton:checked,
+#WebSearchButton:checked,
+#SidebarUnfoldButton:checked,
+#ShowInputButton:checked {
+    background-color: #e5effe;
+    border: 1px solid #8ab2ff;
+    color: #5586e8;
+    margin: 0px;
+    padding: 0px;
+}
+
+#SendToLbl {
+    font-size: 14px;
+    color: #454545;
+}
+
+#SendToCbb {
+    font-size: 14px;
+    min-width: 200px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 5px;
+    border: 1px solid #dedede;
+}
+
+#SendToCbb QAbstractItemView {
+    background: #FFFFFF;
+    border: 1px solid #DADADA;
+    selection-background-color: #5586e8;
+    selection-color: white;
+    outline: 0;
+}
+
+#SendToCbb QAbstractItemView::item {
+    height: 24px;
+}
+
+#SendToCbb QAbstractItemView::item:hover {
+    background: #F5F7FA;
+}
+
+#SendToCbb QAbstractItemView::item:selected {
+    background: #5586e8;
+    color: white;
+}

@@ -1,0 +1,42 @@
+SidebarTitle {
+    min-width: 50px;
+    max-width: 50px;
+    background-color: #333333;
+    border-right: 2px solid qlineargradient(x1:0, y1:0, x2:0.5, y2:0, stop:0 #000000, stop:1 #1e1e1e);
+}
+
+QToolButton {
+    min-width: 50px;
+    max-width: 50px;
+    min-height: 50px;
+    max-height: 50px;
+    border: none;
+    qproperty-toolButtonStyle: ToolButtonIconOnly;
+    qproperty-iconSize: 32px 32px;
+}
+
+QToolButton:hover {
+    background-color: #454545;
+}
+
+QToolButton:checked {
+    background-color: #454545;
+    margin: 0px;
+    padding: 0px;
+    padding-left: -4px;
+    border-left: 4px solid #007fd4;
+}
+
+QToolButton:pressed {
+    margin: 0px;
+    padding-left: -4px;
+    border-left: 4px solid #454545;
+}
+
+#OnlineBtn {
+    qproperty-icon: url(":/img/dark/sidebar_online_btn");
+}
+
+#SettingBtn {
+    qproperty-icon: url(":/img/dark/settings_btn");
+}

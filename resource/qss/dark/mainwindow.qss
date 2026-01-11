@@ -1,0 +1,144 @@
+QWidget {
+    background-color: transparent;
+    font-family: "Source Han Sans Medium";
+    /* font-family: Arial, Helvetica, sans-serif; */
+    font-weight: medium;
+}
+
+#MainWidget {
+    border-top: 4px solid qlineargradient(x1:0, y1:0.5, x2:0, y2:1, stop:0 #323232, stop:1 #000000);
+}
+
+SidebarPanel {
+    min-width: 200px;
+    background-color: #252526;
+}
+
+CentralWidget {
+    background-color: #323232;
+}
+
+LoadingWidget {
+    background-color: #323232;
+}
+
+QuestionUpDownWidget {
+    background-color: transparent;
+}
+
+QuestionUpDownWidget #UpButton {
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    border: 1px solid #454545;
+    qproperty-iconSize: 16px 16px;
+    qproperty-toolButtonStyle: ToolButtonIconOnly;
+    qproperty-icon: url(":/img/dark/arrow_up_btn");
+}
+
+QuestionUpDownWidget #DownButton {
+    min-width: 24px;
+    max-width: 24px;
+    min-height: 24px;
+    max-height: 24px;
+    border-radius: 12px;
+    border: 1px solid #454545;
+    qproperty-iconSize: 16px 16px;
+    qproperty-toolButtonStyle: ToolButtonIconOnly;
+    qproperty-icon: url(":/img/dark/arrow_down_btn");
+}
+
+QuestionUpDownWidget #UpButton:hover,
+QuestionUpDownWidget #DownButton:hover {
+    background-color: #787878;
+}
+
+QuestionUpDownWidget #UpButton:disabled,
+QuestionUpDownWidget #DownButton:disabled {
+    background-color: #454545;
+}
+
+InputPanel {
+    background-color: #323232;
+}
+
+OSplitterHandle[orientation="1"] {
+    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #000000, stop:0.5 #1e1e1e, stop:1 #000000);
+}
+
+/* Vertical*/
+OSplitterHandle[orientation="2"] {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #000000, stop:0.5 #1e1e1e, stop:1 #000000);
+}
+
+OSplitterHandle:hover {
+    background-color: #007fd4;
+}
+
+/* === 滚动条通用样式 === */
+QScrollArea {
+    border: none;
+    background-color: transparent;
+}
+
+QScrollBar::vertical {
+    width: 6px;
+    margin: 0px, 0px, 0px, 0px;
+    background-color: transparent;
+}
+
+QScrollBar::horizontal {
+    height: 6px;
+    margin: 0px, 0px, 0px, 0px;
+    background-color: transparent;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #575757;
+    border-radius: 2px;
+    width: 4px;
+    min-height: 20px;
+    border: 1px solid #1e1e1e;
+}
+
+QScrollBar::handle:horizontal {
+    background-color: #575757;
+    border-radius: 2px;
+    height: 4px;
+    min-width: 20px;
+    border: 1px solid #1e1e1e;
+}
+
+QScrollBar::add-page, QScrollBar::sub-page {
+    background: none;
+}
+
+QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical,
+QScrollBar::sub-line:horizontal, QScrollBar::add-line:horizontal {
+    width: 0px;
+    height: 0px;
+}
+
+QMessageBox {
+    background-color: #232323;
+    color: #d3d3d3;
+}
+
+QMessageBox QPushButton {
+    color: white;
+    background: transparent;
+    border: 1px solid gray;
+    border-radius: 4px;
+    padding: 5px 20px 5px 20px;
+}
+
+QMessageBox QPushButton:hover {
+    background: gray;
+}
+
+QMessageBox QLabel {
+    color: white;
+    font-size: 15px;
+}

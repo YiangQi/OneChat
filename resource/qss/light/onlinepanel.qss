@@ -1,0 +1,69 @@
+#TitleWidget {
+    min-height: 36px;
+    max-height: 36px;
+    background-color: #ededed;
+    border-bottom: 2px solid qlineargradient(x1:0, y1:0, x2:0, y2:0.5, stop:0 #ededed, stop:1 #d3d3d3);
+}
+
+#PanelTitleLabel {
+    font-size: 18px;
+    font-weight: medium;
+    color: #232323;
+}
+
+QTreeWidget {
+    border: none;
+    outline: none;
+    color: #232323;
+}
+
+QTreeView::branch:open:has-children {
+    border-image: none;
+    image: url(":/img/light/arrow_down");
+    width: 16px;
+    height: 16px;
+}
+
+QTreeView::branch:closed:has-children {
+    border-image: none;
+    image: url(":/img/light/arrow_right");
+    width: 16px;
+    height: 16px;
+}
+
+QTreeWidget::item {
+    min-height: 36px;
+    max-height: 36px;
+    margin-right: 20px;
+    border-radius: 5px;
+    color: #232323;
+}
+
+QTreeWidget::item:hover {
+    background-color: #007fd4;
+}
+
+QTreeWidget::item:selected {
+    background-color: #7db3d6;
+    color: #232323;
+}
+
+OnlineTreeItemWidget {
+    min-height: 36px;
+    max-height: 36px;
+    border-top: 1px solid #ececec;
+    border-bottom: 1px solid #ececec;
+}
+
+OnlineTreeItemWidget #OnlineIcon {
+    min-height: 20px;
+    max-height: 20px;
+    min-width: 20px;
+    max-width: 20px;
+}
+
+OnlineTreeItemWidget #OnlineName {
+    font-size: 15px;
+    color: #232323;
+    font-weight: bolder;
+}
