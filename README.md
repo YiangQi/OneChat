@@ -18,7 +18,9 @@ Not only that, OneChat also supports one-click controls for showing or hiding al
 
 ## 📺 Video Introduction
 
-[![BiliBili_Cover](./resource/screenshots/bilibili_video_link.png)](https://www.bilibili.com/video/BV1TCraBBE4G)
+<a href="https://www.bilibili.com/video/BV1TCraBBE4G" target="_blank">
+  <img src="./resource/screenshots/bilibili_video_link.png" alt="video introduction"/>
+</a>
 
 ## ⬇️ Download and Run
 

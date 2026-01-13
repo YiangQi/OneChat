@@ -19,7 +19,9 @@
 
 ## 📺 功能视频介绍
 
-[![B站视频封面](./resource/screenshots/bilibili_video_link.png)](https://www.bilibili.com/video/BV1TCraBBE4G)
+<a href="https://www.bilibili.com/video/BV1TCraBBE4G" target="_blank">
+  <img src="./resource/screenshots/bilibili_video_link.png" alt="video introduction"/>
+</a>
 
 ## ⬇️ 下载和运行
 
