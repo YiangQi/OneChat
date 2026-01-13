@@ -10,11 +10,22 @@ English | [简体中文](README_ZH-CN.md)
 **OneChat**, as the name suggests, is a tool that can simultaneously converse with multiple online large-model websites. OneChat can send your question to multiple AI pages at once, helping you discover the best answers.
 Not only that, OneChat also supports one-click controls for showing or hiding all pages' sidebars, showing or hiding input boxes, starting new conversations, uploading files, quickly locating items in the conversation list, and more.
 
-## Screenshots
+## 📷 Screenshots
 
 | Light Theme | Dark Theme |
 |--|--|
 | ![white_theme](./resource/screenshots/white_theme_zh.png) | ![dark_theme](./resource/screenshots/dark_theme_zh.png) |
+
+## 📺 Video Introduction
+
+[![BiliBili_Cover](./resource/screenshots/bilibili_video_link.png)](https://www.bilibili.com/video/BV1TCraBBE4G)
+
+## ⬇️ Download and Run
+
+**v0.0.1 version only supports Windows platform:​**
+- Download link: https://github.com/YiangQi/OneChat/releases/tag/v0.0.1 
+- Select onechat_0.0.1.zipand click to download;
+- After extraction, double-click OneChat.exe to run.
 
 ## 🔥 Features
 
