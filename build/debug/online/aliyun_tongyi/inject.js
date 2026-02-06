@@ -64,16 +64,31 @@ function onUrlChanged(args) {
  * @param {string} text: all the text in the client-side input box.
  */
 function onInputTextChanged(text) {
-    const inputElement = document.querySelector('textarea[class*="ant-input"]')
-    if (inputElement) {
-        const nativeTextareaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
-        nativeTextareaSetter.call(inputElement, text);
-        const inputEvent = new InputEvent('input', {
+    const editor = document.querySelector('div[contenteditable="true"] p');
+    if (!editor) return;
+
+    editor.focus();
+
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    selection.removeAllRanges();
+    selection.addRange(range);
+
+    editor.dispatchEvent(new InputEvent('beforeinput', {
+        inputType: 'deleteContent',
+        bubbles: true,
+        cancelable: false
+    }));
+
+    setTimeout(() => {
+        editor.dispatchEvent(new InputEvent('beforeinput', {
+            inputType: 'insertText',
+            data: text,
             bubbles: true,
-            cancelable: true,
-        });
-        inputElement.dispatchEvent(inputEvent);
-    }
+            cancelable: false
+        }));
+    }, 10);
 }
 
 /**
