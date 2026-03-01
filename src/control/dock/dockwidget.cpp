@@ -236,8 +236,8 @@ void DockWidget::slotDockTabFloated()
 {
     DockWidgetTabInfo tabInfo;
     QWidget *contentWgt = this->dragOutCurrentTab(tabInfo);
-    emit signalFloatWidget(tabInfo, contentWgt);
     this->autoRemoveDockWidget(false);
+    emit signalFloatWidget(tabInfo, contentWgt);
 }
 
 void DockWidget::slotTabBarCloseBtnClicked()
