@@ -316,7 +316,9 @@ void DockContainer::createDockFloatWidget(const DockWidgetTabInfo &tabInfo,
 {
     DockFloatWidget *floatWindow = new DockFloatWidget(mThemeMode);
     floatWindow->addNewDockWidget(tabInfo, contentWgt);
-    floatWindow->resize(this->size());
+    floatWindow->resize(this->size() * 0.9);
+    QPoint pos = this->mapToGlobal(this->pos());
+    floatWindow->move(pos);
     floatWindow->show();
 }
 
