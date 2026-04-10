@@ -1,0 +1,68 @@
+[
+    {
+        "name": "ChatGPT",
+        "url": "https://chat.openai.com/",
+        "icon": "openai_chatgpt/logo.png",
+        "script": "openai_chatgpt/inject.js"
+    },
+    {
+        "name": "ChatGLM",
+        "url": "https://chatglm.cn/",
+        "icon": "zhipu_chatglm/logo.png",
+        "script": "zhipu_chatglm/inject.js"
+    },
+    {
+        "name": "Claude",
+        "url": "https://claude.ai",
+        "icon": "anthropic_claude/logo.png",
+        "script": "anthropic_claude/inject.js"
+    },
+    {
+        "name": "DeepSeek",
+        "url": "https://chat.deepseek.com",
+        "icon": "deepseek_deepseek/logo.png",
+        "script": "deepseek_deepseek/inject.js"
+    },
+    {
+        "name": "DouBao",
+        "url": "https://www.doubao.com/chat/",
+        "icon": "bytedance_doubao/logo.png",
+        "script": "bytedance_doubao/inject.js"
+    },
+    {
+        "name": "Gemini",
+        "url": "https://gemini.google.com",
+        "icon": "google_gemini/logo.png",
+        "script": "google_gemini/inject.js"
+    },
+    {
+        "name": "Grok",
+        "url": "https://grok.com",
+        "icon": "x_grok/logo.png",
+        "script": "x_grok/inject.js"
+    },
+    {
+        "name": "Kimi",
+        "url": "https://www.kimi.com",
+        "icon": "moonshot_kimi/logo.png",
+        "script": "moonshot_kimi/inject.js"
+    },
+    {
+        "name": "Qwen",
+        "url": "https://chat.qwen.ai",
+        "icon": "aliyun_qianwen/logo.png",
+        "script": "aliyun_qianwen/inject.js"
+    },
+    {
+        "name": "Tongyi",
+        "url": "https://www.tongyi.com",
+        "icon": "aliyun_tongyi/logo.png",
+        "script": "aliyun_tongyi/inject.js"
+    },
+    {
+        "name": "YuanBao",
+        "url": "https://yuanbao.tencent.com",
+        "icon": "tencent_yuanbao/logo.png",
+        "script": "tencent_yuanbao/inject.js"
+    }
+]
