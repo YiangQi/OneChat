@@ -28,6 +28,15 @@ export default defineConfig({
         '@shared': resolve(__dirname, 'src/shared')
       }
     },
-    plugins: [vue()]
+    plugins: [vue()],
+    server: {
+      fs: {
+        // 允许访问项目根目录和 online 目录
+        allow: ['..', '.']
+      },
+      proxy: {
+        // 代理 /online 路径到本地文件
+      }
+    }
   }
 })
