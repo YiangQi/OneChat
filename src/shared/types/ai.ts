@@ -7,3 +7,11 @@ export interface AIModel {
 }
 
 export type AIModelConfig = Omit<AIModel, 'id'>
+
+/**
+ * Result of reading online configuration
+ */
+export interface OnlineConfigResult {
+  models: AIModel[]
+  onlineDir: string
+}

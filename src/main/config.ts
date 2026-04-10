@@ -1,18 +1,10 @@
 import { readFile, access, constants } from 'fs/promises'
 import { join } from 'path'
 import { app } from 'electron'
-import type { AIModel, AIModelConfig } from '../shared/types'
+import type { AIModel, AIModelConfig, OnlineConfigResult } from '../shared/types'
 
 const ONLINE_CONFIG_PATH = join(app.getPath('userData'), 'online.json')
-const REPO_CONFIG_PATH = join(process.cwd(), 'online', 'online.json')
-
-/**
- * Result of reading online configuration
- */
-export interface OnlineConfigResult {
-  models: AIModel[]
-  onlineDir: string
-}
+const REPO_CONFIG_PATH = join(app.isPackaged ? app.getAppPath() : process.cwd(), 'online', 'online.json')
 
 /**
  * Reads the online AI models configuration from online.json
@@ -92,5 +84,8 @@ export function getOnlineConfigPath(): string {
  * @returns string Path to the online resources directory
  */
 export function getOnlineDirectoryPath(): string {
-  return join(process.cwd(), 'online')
+  // In production (packaged app), use app.getAppPath() to get the app's resource directory
+  // In development, process.cwd() works correctly
+  const basePath = app.isPackaged ? app.getAppPath() : process.cwd()
+  return join(basePath, 'online')
 }

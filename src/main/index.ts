@@ -1,5 +1,5 @@
 import { app, ipcMain } from 'electron'
-import { createMainWindow, closeAllWindows } from './window'
+import { createMainWindow, closeAllWindows, createIndependentWindow } from './window'
 import { readOnlineConfig } from './config'
 import { IPC_CHANNELS } from '../shared/constants'
 
@@ -25,7 +25,6 @@ function registerIpcHandlers() {
 
   // Handler for creating independent windows
   ipcMain.on(IPC_CHANNELS.WINDOW_CREATE_INDEPENDENT, (_event, { tabData, bounds }) => {
-    const { createIndependentWindow } = require('./window')
     createIndependentWindow(tabData, bounds)
   })
 

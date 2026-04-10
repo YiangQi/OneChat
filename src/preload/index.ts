@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC_CHANNELS } from '../shared/constants'
+import type { OnlineConfigResult } from '../shared/types'
 
 /**
  * Exposes protected methods that allow the renderer process to use
@@ -54,7 +55,7 @@ contextBridge.exposeInMainProcess('electronAPI', {
 declare global {
   interface Window {
     electronAPI: {
-      readOnlineConfig: () => Promise<{ models: Array<{ id: string; name: string; url: string; icon: string; script?: string }>; onlineDir: string }>
+      readOnlineConfig: () => Promise<OnlineConfigResult>
       createIndependentWindow: (tabData: any, bounds?: { x: number; y: number; width: number; height: number }) => void
       closeAllWindows: () => void
       getSystemTheme: () => Promise<string>
