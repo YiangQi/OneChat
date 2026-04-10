@@ -72,7 +72,7 @@ describe('AIList Component', () => {
     await wrapper.vm.$nextTick()
 
     const icons = wrapper.findAll('.ai-icon')
-    expect(icons[0].attributes('src')).toBe('/online/openai_chatgpt/logo.png')
+    expect(icons[0].attributes('src')).toBe('online://openai_chatgpt/logo.png')
   })
 
   it('should render no models when empty', () => {

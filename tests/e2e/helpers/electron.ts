@@ -1,20 +1,85 @@
-import { test as _test } from '@playwright/test'
+import { _electron as electron, ElectronApplication, Page } from '@playwright/test'
 
-// 简化的 Electron 测试辅助
-// 注意: 完整的 Electron E2E 测试需要应用已构建
-// 这里我们创建一个用于将来扩展的框架
+/**
+ * Launch the Electron application for E2E testing
+ * This function requires the app to be built first
+ */
+export async function launchElectronApp() {
+  // Determine the path to the built Electron app
+  // In development, we use the main process entry point
+  // In production, we use the built executable
 
-export const test = _test.extend<{
-  appWindow: Awaited<ReturnType<typeof launchElectronApp>>
-}>({
-  appWindow: async ({}, use) => {
-    // TODO: 实现 Electron 应用启动逻辑
-    // 这需要应用已构建，并使用 electron-builder 的产品
-    console.log('E2E tests require the app to be built first.')
-    console.log('Run: npm run build')
-    console.log('Then implement the launchElectronApp function.')
+  const isDev = process.env.NODE_ENV !== 'production'
 
-    // 暂时使用 null 作为占位符
-    await use(null as any)
+  let electronApp: ElectronApplication
+
+  if (isDev) {
+    // Development mode: Launch from source
+    // We need to build first or use electron-vite dev mode
+    console.log('[E2E] Launching Electron in development mode...')
+
+    // For development E2E tests, we need to start the app
+    // This requires the app to be built or running in dev mode
+    electronApp = await electron.launch({
+      executablePath: require('electron'),
+      args: [require('path').join(__dirname, '../../../out/main/index.js')],
+      timeout: 30000
+    })
+  } else {
+    // Production mode: Use the built app
+    const execPath = process.platform === 'win32'
+      ? require('path').join(__dirname, '../../../dist/OneChat.exe')
+      : require('path').join(__dirname, '../../../dist/OneChat.app/Contents/MacOS/OneChat')
+
+    electronApp = await electron.launch({
+      executablePath: execPath,
+      timeout: 30000
+    })
   }
-})
+
+  return electronApp
+}
+
+/**
+ * Wait for the main window to be ready
+ */
+export async function getMainWindow(electronApp: ElectronApplication): Promise<Page> {
+  await electronApp.firstWindow({ timeout: 15000 })
+  const windows = electronApp.windows()
+
+  if (windows.length === 0) {
+    throw new Error('No windows found')
+  }
+
+  return windows[0]
+}
+
+/**
+ * Setup E2E test environment
+ */
+export async function setupE2E() {
+  console.log('[E2E] Setting up E2E test environment...')
+
+  // Build the app if needed
+  if (!process.env.E2E_SKIP_BUILD) {
+    console.log('[E2E] Building app for testing...')
+    const { execSync } = require('child_process')
+    try {
+      execSync('npm run build', { stdio: 'inherit' })
+    } catch (error) {
+      console.error('[E2E] Build failed, attempting to run tests anyway...')
+    }
+  }
+
+  const electronApp = await launchElectronApp()
+  const mainWindow = await getMainWindow(electronApp)
+
+  return { electronApp, mainWindow }
+}
+
+/**
+ * Teardown E2E test environment
+ */
+export async function teardownE2E(electronApp: ElectronApplication) {
+  await electronApp.close()
+}
