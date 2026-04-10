@@ -20,6 +20,7 @@ html, body, #app {
   --text-primary: #333333;
   --text-secondary: #666666;
   --border-color: #c8c8c8;
+  --list-bottom-border-color: #ececec;
   --accent-color: #007acc;
   --hover-color: #e8e8e8;
 }
@@ -32,6 +33,7 @@ html, body, #app {
   --text-primary: #d4d4d4;
   --text-secondary: #858585;
   --border-color: #3d3d3d;
+  --list-bottom-border-color: #1e1e1e;
   --accent-color: #007acc;
   --hover-color: #2a2d2e;
 }

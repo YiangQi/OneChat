@@ -96,7 +96,7 @@ function startResize(e: MouseEvent) {
 
 /* 浅色主题 */
 .theme-light .sidebar {
-  background: #f3f3f3;
+  background: #fdfdfd;
   border-right: 1px solid #bbb;
 }
 

@@ -81,12 +81,19 @@ function handleImageError(event: Event) {
   align-items: center;
   padding: 12px;
   cursor: pointer;
-  border-radius: 4px;
-  transition: background 0.2s;
+  transition: background 0.15s ease;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--list-bottom-border-color);
 }
 
 .ai-item:hover {
-  background: var(--hover-color);
+  background: var(--accent-color);
+  color: #ffffff;
+  border-bottom-color: var(--accent-color);
+}
+
+.ai-item:hover .ai-name {
+  color: #ffffff;
 }
 
 .ai-icon {
@@ -94,9 +101,12 @@ function handleImageError(event: Event) {
   height: 24px;
   margin-right: 12px;
   border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .ai-name {
   font-size: 14px;
+  color: var(--text-primary);
+  flex: 1;
 }
 </style>

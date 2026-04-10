@@ -35,7 +35,7 @@ defineEmits<{
 .activity-bar {
   width: 48px;
   height: 100%;
-  background: #1a1a1a;
+  background: #333333;
   border-right: 1px solid #444;
   display: flex;
   flex-direction: column;
@@ -48,7 +48,7 @@ defineEmits<{
 
 /* 浅色主题 */
 .theme-light .activity-bar {
-  background: #e8e8e8;
+  background: #ffffff;
   border-right: 1px solid #bbb;
   box-shadow: 1px 0 2px rgba(0, 0, 0, 0.05);
 }

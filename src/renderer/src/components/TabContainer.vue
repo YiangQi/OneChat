@@ -1,5 +1,5 @@
 <template>
-  <div class="tab-container" ref="containerRef">
+  <div class="tab-container">
     <!-- 空状态 -->
     <div v-if="tabsStore.tabs.length === 0" class="empty-state">
       <p>从左侧选择一个 AI 模型开始对话</p>
@@ -37,13 +37,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import { Close } from '@element-plus/icons-vue'
 import { useTabsStore } from '@/stores/tabs'
 import WebViewContainer from './WebViewContainer.vue'
 
 const tabsStore = useTabsStore()
-const containerRef = ref<HTMLElement>()
 
 function getIconPath(icon: string) {
   return `online://${icon}`
@@ -91,19 +89,24 @@ function handleImageError(event: Event) {
 .tab {
   display: flex;
   align-items: center;
-  height: 100%;
+  height: 38px;
+  margin-top: 2px;
   padding: 0 12px;
   min-width: 120px;
   max-width: 200px;
   background: var(--bg-tertiary);
-  border-right: 1px solid #444;
+  border-right: 1px solid #666;
+  border-top: 1px solid #666;
   cursor: pointer;
   user-select: none;
   transition: background 0.2s;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
 }
 
 .theme-light .tab {
-  border-right: 1px solid #ddd;
+  border-right: 1px solid #ccc;
+  border-top: 1px solid #ccc;
 }
 
 .tab:hover {
