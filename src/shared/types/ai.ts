@@ -6,9 +6,4 @@ export interface AIModel {
   script?: string
 }
 
-export interface AIModelConfig {
-  name: string
-  url: string
-  icon: string
-  script?: string
-}
+export type AIModelConfig = Omit<AIModel, 'id'>

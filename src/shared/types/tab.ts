@@ -1,7 +1,9 @@
+import type { AIModel } from './ai'
+
 export interface Tab {
   id: string
   modelId: string
-  model: any
+  model: AIModel
   createdAt: number
   windowId?: number
 }

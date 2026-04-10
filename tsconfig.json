@@ -16,6 +16,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src/renderer/src", "src/preload"],
+  "include": ["src/renderer/src", "src/preload", "src/shared"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
