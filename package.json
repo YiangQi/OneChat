@@ -2,7 +2,7 @@
   "name": "onechat",
   "version": "1.0.0",
   "description": "Ask once, get answers from many",
-  "main": "dist/main/index.js",
+  "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
@@ -10,10 +10,11 @@
     "build:win": "npm run build && electron-builder --win"
   },
   "dependencies": {
-    "vue": "^3.4.0",
-    "pinia": "^2.1.0",
+    "@element-plus/icons-vue": "^2.3.2",
     "element-plus": "^2.5.0",
-    "golden-layout": "^2.6.0"
+    "golden-layout": "^2.6.0",
+    "pinia": "^2.1.0",
+    "vue": "^3.4.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",

@@ -3,8 +3,13 @@ import { join } from 'path'
 import { app } from 'electron'
 import type { AIModel, AIModelConfig, OnlineConfigResult } from '../shared/types'
 
-const ONLINE_CONFIG_PATH = join(app.getPath('userData'), 'online.json')
-const REPO_CONFIG_PATH = join(app.isPackaged ? app.getAppPath() : process.cwd(), 'online', 'online.json')
+function getOnlineConfigPath() {
+  return join(app.getPath('userData'), 'online.json')
+}
+
+function getRepoConfigPath() {
+  return join(app.isPackaged ? app.getAppPath() : process.cwd(), 'online', 'online.json')
+}
 
 /**
  * Reads the online AI models configuration from online.json
@@ -55,13 +60,13 @@ export async function readOnlineConfig(): Promise<OnlineConfigResult> {
 async function getConfigPath(): Promise<string | null> {
   // Check userData first
   try {
-    await access(ONLINE_CONFIG_PATH, constants.R_OK)
-    return ONLINE_CONFIG_PATH
+    await access(getOnlineConfigPath(), constants.R_OK)
+    return getOnlineConfigPath()
   } catch {
     // Fall back to repo directory
     try {
-      await access(REPO_CONFIG_PATH, constants.R_OK)
-      return REPO_CONFIG_PATH
+      await access(getRepoConfigPath(), constants.R_OK)
+      return getRepoConfigPath()
     } catch {
       return null
     }
@@ -73,8 +78,8 @@ async function getConfigPath(): Promise<string | null> {
  *
  * @returns string Path to the userData online.json file
  */
-export function getOnlineConfigPath(): string {
-  return ONLINE_CONFIG_PATH
+export function getOnlineConfigPathExport(): string {
+  return getOnlineConfigPath()
 }
 
 /**
