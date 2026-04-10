@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { AIModel } from '@shared/types'
+import { useLayoutStore } from './layout'
 
 export interface Tab {
   id: string
@@ -45,7 +46,10 @@ export const useTabsStore = defineStore('tabs', () => {
   }
 
   function splitTab(id: string, direction: 'horizontal' | 'vertical') {
-    // Will be implemented with Golden Layout
+    const layoutStore = useLayoutStore()
+    // 将 horizontal/vertical 转换为 row/column
+    const glDirection = direction === 'horizontal' ? 'row' : 'column'
+    layoutStore.splitTab(id, glDirection)
   }
 
   function moveTab(tabId: string, targetWindow: number) {
