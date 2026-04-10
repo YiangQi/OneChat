@@ -46,7 +46,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
    */
   onTabDropped: (callback: (data: any) => void) => {
     ipcRenderer.on(IPC_CHANNELS.WINDOW_TAB_DROPPED, (_event, data) => callback(data))
-  }
+  },
+
+  /**
+   * Merges a tab to the main window
+   * @param tabData - The tab data to merge
+   * @param sourceWindowId - The ID of the source window
+   */
+  mergeToMainWindow: (tabData: any, sourceWindowId: number) =>
+    ipcRenderer.invoke(IPC_CHANNELS.WINDOW_MERGE_TO_MAIN, { tabData, sourceWindowId }),
+
+  /**
+   * Gets all independent windows
+   * @returns Promise<Array> Array of window info objects
+   */
+  getAllWindows: () => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_GET_ALL)
 })
 
 /**
@@ -61,6 +75,8 @@ declare global {
       getSystemTheme: () => Promise<string>
       onThemeSystemChanged: (callback: (theme: string) => void) => void
       onTabDropped: (callback: (data: any) => void) => void
+      mergeToMainWindow: (tabData: any, sourceWindowId: number) => Promise<boolean>
+      getAllWindows: () => Promise<Array<{ id: number; hasTab: boolean }>>
     }
   }
 }

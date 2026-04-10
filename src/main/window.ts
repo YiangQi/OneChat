@@ -1,7 +1,8 @@
-import { BrowserWindow, screen } from 'electron'
+import { BrowserWindow, screen, ipcMain } from 'electron'
 import { join } from 'path'
+import { IPC_CHANNELS } from '../shared/constants'
 
-let independentWindows: BrowserWindow[] = []
+let independentWindows: Array<{ window: BrowserWindow; tabData: any }> = []
 
 export function createMainWindow() {
   const mainWindow = new BrowserWindow({
@@ -9,8 +10,8 @@ export function createMainWindow() {
     height: 900,
     minWidth: 1200,
     minHeight: 800,
-    frame: true,  // 保留系统标题栏
-    autoHideMenuBar: true,  // 自动隐藏菜单栏
+    frame: true,
+    autoHideMenuBar: true,
     resizable: true,
     backgroundColor: '#1e1e1e',
     webPreferences: {
@@ -64,18 +65,61 @@ export function createIndependentWindow(tabData: any, bounds?: { x: number; y: n
   })
 
   win.on('closed', () => {
-    independentWindows = independentWindows.filter(w => w !== win)
+    independentWindows = independentWindows.filter(w => w.window !== win)
   })
 
-  independentWindows.push(win)
+  const windowInfo = { window: win, tabData }
+  independentWindows.push(windowInfo)
   return win
 }
 
 export function closeAllWindows() {
-  independentWindows.forEach(win => win.close())
+  independentWindows.forEach(w => w.window.close())
   independentWindows = []
 }
 
 export function getAllIndependentWindows() {
-  return independentWindows
+  return independentWindows.map(w => w.window)
+}
+
+// 新增：获取窗口信息
+export function getWindowInfo(windowId: number) {
+  return independentWindows.find(w => w.window.id === windowId)
+}
+
+// 新增：合并标签到主窗口
+export function mergeTabToMainWindow(tabData: any, sourceWindowId: number) {
+  const sourceWindowInfo = independentWindows.find(w => w.window.id === sourceWindowId)
+
+  if (!sourceWindowInfo) {
+    console.error('[WindowManager] Source window not found')
+    return false
+  }
+
+  // 从源窗口移除标签数据
+  sourceWindowInfo.tabData = null
+
+  // 如果源窗口没有标签了，关闭它
+  if (!sourceWindowInfo.tabData) {
+    sourceWindowInfo.window.close()
+    independentWindows = independentWindows.filter(w => w.window.id !== sourceWindowId)
+  }
+
+  return true
+}
+
+// 注册窗口管理 IPC handlers
+export function registerWindowIpcHandlers() {
+  // 合并标签到主窗口
+  ipcMain.handle(IPC_CHANNELS.WINDOW_MERGE_TO_MAIN, async (_event, { tabData, sourceWindowId }) => {
+    return mergeTabToMainWindow(tabData, sourceWindowId)
+  })
+
+  // 获取所有独立窗口
+  ipcMain.handle(IPC_CHANNELS.WINDOW_GET_ALL, () => {
+    return independentWindows.map(w => ({
+      id: w.window.id,
+      hasTab: !!w.tabData
+    }))
+  })
 }

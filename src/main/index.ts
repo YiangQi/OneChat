@@ -1,5 +1,5 @@
 import { app, ipcMain, protocol, nativeTheme } from 'electron'
-import { createMainWindow, closeAllWindows, createIndependentWindow } from './window'
+import { createMainWindow, closeAllWindows, createIndependentWindow, registerWindowIpcHandlers } from './window'
 import { readOnlineConfig } from './config'
 import { IPC_CHANNELS } from '../shared/constants'
 import { join } from 'path'
@@ -84,6 +84,9 @@ function registerIpcHandlers() {
     // 返回实际的系统主题：'light' 或 'dark'
     return nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
   })
+
+  // 注册窗口管理 IPC handlers
+  registerWindowIpcHandlers()
 }
 
 app.whenReady().then(() => {

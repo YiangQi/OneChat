@@ -5,6 +5,11 @@ export const IPC_CHANNELS = {
   WINDOW_CLOSE_ALL: 'window:close-all',
   THEME_GET_SYSTEM: 'theme:get-system',
 
+  // 新增：窗口合并相关
+  WINDOW_MERGE_TO_MAIN: 'window:merge-to-main',
+  WINDOW_MOVE_TAB: 'window:move-tab-between-windows',
+  WINDOW_GET_ALL: 'window:get-all-windows',
+
   // 主进程 → 渲染进程
   THEME_SYSTEM_CHANGED: 'theme:system-changed',
   WINDOW_TAB_DROPPED: 'window:tab-dropped'
