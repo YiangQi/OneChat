@@ -1,25 +1,56 @@
 <template>
-  <div class="webview-container">
+  <div v-show="visible" class="webview-container">
     <webview
+      v-if="hasLoaded"
       :src="model.url"
       :partition="`persist:${model.id}`"
       class="webview"
+      :data-tab-id="model.id"
+      @dom-ready="handleDomReady"
+      @did-finish-load="handleFinishLoad"
+      @did-fail-load="handleFailLoad"
     ></webview>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import type { AIModel } from '@shared/types'
 
-defineProps<{
+const props = defineProps<{
   model: AIModel
+  visible?: boolean
 }>()
+
+const hasLoaded = ref(false)
+
+// 当 visible 变为 true 时，才加载 webview
+watch(() => props.visible, (newVal) => {
+  if (newVal && !hasLoaded.value) {
+    hasLoaded.value = true
+  }
+}, { immediate: true })
+
+function handleDomReady() {
+  console.log('[WebView] DOM ready:', props.model.name)
+}
+
+function handleFinishLoad() {
+  console.log('[WebView] Loaded:', props.model.name)
+}
+
+function handleFailLoad(event: any) {
+  console.error('[WebView] Load failed:', props.model.name, event)
+}
 </script>
 
 <style scoped>
 .webview-container {
-  flex: 1;
-  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 .webview {

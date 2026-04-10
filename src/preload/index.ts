@@ -6,7 +6,7 @@ import type { OnlineConfigResult } from '../shared/types'
  * Exposes protected methods that allow the renderer process to use
  * the ipcRenderer without exposing the entire object
  */
-contextBridge.exposeInMainProcess('electronAPI', {
+contextBridge.exposeInMainWorld('electronAPI', {
   /**
    * Reads the online AI models configuration
    * @returns Promise<OnlineConfigResult> Object containing models array and online directory path

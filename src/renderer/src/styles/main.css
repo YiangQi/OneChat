@@ -12,6 +12,18 @@ html, body, #app {
   overflow: hidden;
 }
 
+/* 默认浅色主题 */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f3f3f3;
+  --bg-tertiary: #e8e8e8;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --border-color: #c8c8c8;
+  --accent-color: #007acc;
+  --hover-color: #e8e8e8;
+}
+
 /* 深色主题 */
 .theme-dark {
   --bg-primary: #1e1e1e;
@@ -19,21 +31,21 @@ html, body, #app {
   --bg-tertiary: #2d2d30;
   --text-primary: #d4d4d4;
   --text-secondary: #858585;
-  --border-color: #3c3c3c;
+  --border-color: #3d3d3d;
   --accent-color: #007acc;
-  --hover-color: #3c3c3c;
+  --hover-color: #2a2d2e;
 }
 
-/* 浅色主题 */
+/* 浅色主题（显式） */
 .theme-light {
   --bg-primary: #ffffff;
   --bg-secondary: #f3f3f3;
   --bg-tertiary: #e8e8e8;
   --text-primary: #333333;
   --text-secondary: #666666;
-  --border-color: #e0e0e0;
+  --border-color: #c8c8c8;
   --accent-color: #007acc;
-  --hover-color: #f0f0f0;
+  --hover-color: #e8e8e8;
 }
 
 body {

@@ -9,8 +9,10 @@ export function createMainWindow() {
     height: 900,
     minWidth: 1200,
     minHeight: 800,
-    frame: true,
+    frame: true,  // 保留系统标题栏
+    autoHideMenuBar: true,  // 自动隐藏菜单栏
     resizable: true,
+    backgroundColor: '#1e1e1e',
     webPreferences: {
       webviewTag: true,
       nodeIntegration: false,

@@ -10,7 +10,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Chat, Setting } from '@element-plus/icons-vue'
+import { ChatDotRound, Setting } from '@element-plus/icons-vue'
 import { useThemeStore } from '@/stores/theme'
 import ActivityBar from '@/components/ActivityBar.vue'
 import Sidebar from '@/components/Sidebar.vue'
@@ -22,7 +22,7 @@ const themeStore = useThemeStore()
 const activeModule = ref('ai')
 
 const menuItems = [
-  { id: 'ai', icon: Chat },
+  { id: 'ai', icon: ChatDotRound },
   { id: 'settings', icon: Setting }
 ]
 
