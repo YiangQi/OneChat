@@ -68,4 +68,61 @@ describe('Tabs Store', () => {
     // 应该激活第二个标签（现在是第一个）
     expect(store.activeTabId).toBe(store.tabs[0].id)
   })
+
+  describe('activateTab', () => {
+    it('should activate existing tab', () => {
+      const store = useTabsStore()
+      store.openTab(fixtures.mockAIModels[0])
+      store.openTab(fixtures.mockAIModels[1])
+
+      const firstTabId = store.tabs[0].id
+      const secondTabId = store.tabs[1].id
+
+      // 确保第二个标签是激活的
+      expect(store.activeTabId).toBe(secondTabId)
+
+      // 激活第一个标签
+      store.activateTab(firstTabId)
+      expect(store.activeTabId).toBe(firstTabId)
+    })
+
+    it('should do nothing if tab does not exist', () => {
+      const store = useTabsStore()
+      store.openTab(fixtures.mockAIModels[0])
+      const originalActiveTabId = store.activeTabId
+
+      store.activateTab('non-existent-id')
+      expect(store.activeTabId).toBe(originalActiveTabId)
+    })
+
+    it('should handle activating already active tab', () => {
+      const store = useTabsStore()
+      store.openTab(fixtures.mockAIModels[0])
+      const activeTabId = store.activeTabId
+
+      store.activateTab(activeTabId)
+      expect(store.activeTabId).toBe(activeTabId)
+    })
+
+    it('should work with multiple tabs', () => {
+      const store = useTabsStore()
+      store.openTab(fixtures.mockAIModels[0])
+      store.openTab(fixtures.mockAIModels[1])
+      store.openTab(fixtures.mockAIModels[2])
+
+      const tabIds = store.tabs.map(t => t.id)
+
+      // 激活第一个标签
+      store.activateTab(tabIds[0])
+      expect(store.activeTabId).toBe(tabIds[0])
+
+      // 激活第三个标签
+      store.activateTab(tabIds[2])
+      expect(store.activeTabId).toBe(tabIds[2])
+
+      // 激活第二个标签
+      store.activateTab(tabIds[1])
+      expect(store.activeTabId).toBe(tabIds[1])
+    })
+  })
 })

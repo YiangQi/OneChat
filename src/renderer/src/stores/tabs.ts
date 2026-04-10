@@ -52,12 +52,20 @@ export const useTabsStore = defineStore('tabs', () => {
     // Will be implemented with Golden Layout
   }
 
+  function activateTab(id: string) {
+    const tab = tabs.value.find(t => t.id === id)
+    if (tab) {
+      activeTabId.value = id
+    }
+  }
+
   return {
     tabs,
     activeTabId,
     isFirstOpen,
     openTab,
     closeTab,
+    activateTab,
     splitTab,
     moveTab
   }
