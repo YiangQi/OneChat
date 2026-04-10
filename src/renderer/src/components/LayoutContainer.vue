@@ -10,6 +10,7 @@
       v-show="tabsStore.tabs.length > 0"
       ref="goldenLayoutContainer"
       class="golden-layout-container"
+      :class="{ 'is-dragging': isDragging }"
     ></div>
   </div>
 </template>
@@ -24,6 +25,7 @@ const tabsStore = useTabsStore()
 const layoutStore = useLayoutStore()
 
 const goldenLayoutContainer = ref<HTMLElement | null>(null)
+const isDragging = ref(false)
 
 // 初始化 Golden Layout
 onMounted(() => {
@@ -41,7 +43,11 @@ onMounted(() => {
             'webview-container',
             GoldenLayoutWebView
           )
-          console.log('[LayoutContainer] Registered webview-container component')
+
+          // 监听拖拽事件
+          setupDragListeners()
+
+          console.log('[LayoutContainer] Registered component and drag listeners')
         }
       }, 100)
 
@@ -50,6 +56,21 @@ onMounted(() => {
     })
   }
 })
+
+// 设置拖拽监听器
+function setupDragListeners() {
+  const gl = layoutStore.goldenLayout
+  if (!gl) return
+
+  // 拖拽开始
+  gl.on('itemDropped', () => {
+    console.log('[LayoutContainer] Item dropped')
+    isDragging.value = false
+  })
+
+  // 监听拖拽悬停
+  // 注意：Golden Layout 的具体事件可能需要根据实际 API 调整
+}
 
 // 清理
 onUnmounted(() => {
@@ -96,7 +117,12 @@ watch(
   overflow: hidden;
 }
 
-/* Golden Layout 基础样式覆盖 */
+/* 拖拽状态 */
+.is-dragging {
+  opacity: 0.95;
+}
+
+/* Golden Layout 样式覆盖 */
 :deep(.lm_goldenlayout) {
   width: 100%;
   height: 100%;
@@ -113,5 +139,30 @@ watch(
 :deep(.lm_header) {
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-color);
+}
+
+/* 拖拽高亮样式 */
+:deep(.lm_drop_target_indicator) {
+  background: var(--accent-color) !important;
+  opacity: 0.3;
+}
+
+:deep(.lm_dragging) {
+  opacity: 0.8;
+}
+
+/* Splitter 样式 */
+:deep(.lm_splitter) {
+  background: transparent;
+  transition: background 0.2s;
+}
+
+:deep(.lm_splitter:hover) {
+  background: var(--accent-color);
+}
+
+:deep(.lm_splitter.lm_dragging) {
+  background: var(--accent-color);
+  opacity: 0.8;
 }
 </style>
