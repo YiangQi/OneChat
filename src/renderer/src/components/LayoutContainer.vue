@@ -15,9 +15,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useTabsStore } from '@/stores/tabs'
 import { useLayoutStore } from '@/stores/layout'
+import GoldenLayoutWebView from './GoldenLayoutWebView.vue'
 
 const tabsStore = useTabsStore()
 const layoutStore = useLayoutStore()
@@ -28,6 +29,25 @@ const goldenLayoutContainer = ref<HTMLElement | null>(null)
 onMounted(() => {
   if (goldenLayoutContainer.value) {
     layoutStore.initLayout(goldenLayoutContainer.value)
+
+    // 等待 GL 初始化后注册组件
+    nextTick(() => {
+      // 监听初始化完成
+      const checkInit = setInterval(() => {
+        if (layoutStore.goldenLayout && layoutStore.isInitialized) {
+          clearInterval(checkInit)
+          // 注册 WebView 容器组件
+          layoutStore.goldenLayout.registerComponent(
+            'webview-container',
+            GoldenLayoutWebView
+          )
+          console.log('[LayoutContainer] Registered webview-container component')
+        }
+      }, 100)
+
+      // 5秒后停止检查
+      setTimeout(() => clearInterval(checkInit), 5000)
+    })
   }
 })
 
@@ -40,12 +60,12 @@ onUnmounted(() => {
 watch(
   () => tabsStore.tabs,
   (newTabs, oldTabs) => {
+    if (!layoutStore.goldenLayout || !layoutStore.isInitialized) return
+
     // 如果有新标签，添加到布局
     if (newTabs.length > (oldTabs?.length || 0)) {
       const newTab = newTabs[newTabs.length - 1]
-      if (layoutStore.isInitialized) {
-        layoutStore.addTabToLayout(newTab.id, newTab)
-      }
+      layoutStore.addTabToLayout(newTab.id, newTab)
     }
   },
   { deep: true }
