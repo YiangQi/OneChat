@@ -14,7 +14,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import type { AIModel } from '@shared/types'
 
 const props = defineProps<{
@@ -23,13 +23,26 @@ const props = defineProps<{
 }>()
 
 const hasLoaded = ref(false)
+const isDestroyed = ref(false)
 
 // 当 visible 变为 true 时，才加载 webview
 watch(() => props.visible, (newVal) => {
+  if (isDestroyed.value) return
+
   if (newVal && !hasLoaded.value) {
-    hasLoaded.value = true
+    // 延迟加载，避免同时加载多个 webview
+    setTimeout(() => {
+      if (!isDestroyed.value) {
+        hasLoaded.value = true
+      }
+    }, 100)
   }
 }, { immediate: true })
+
+// 清理
+onUnmounted(() => {
+  isDestroyed.value = true
+})
 
 function handleDomReady() {
   console.log('[WebView] DOM ready:', props.model.name)

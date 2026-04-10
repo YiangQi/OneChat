@@ -32,6 +32,7 @@ const layoutStore = useLayoutStore()
 
 const goldenLayoutContainer = ref<HTMLElement | null>(null)
 const isDragging = ref(false)
+let rafId: number | null = null
 
 // 初始化 Golden Layout
 onMounted(() => {
@@ -68,18 +69,36 @@ function setupDragListeners() {
   const gl = layoutStore.goldenLayout
   if (!gl) return
 
-  // 拖拽开始
-  gl.on('itemDropped', () => {
-    console.log('[LayoutContainer] Item dropped')
-    isDragging.value = false
+  // 使用 requestAnimationFrame 优化拖拽性能
+  let dragStartTime = 0
+
+  gl.on('itemDragStart', () => {
+    dragStartTime = performance.now()
+    isDragging.value = true
+
+    // 取消之前的 raf
+    if (rafId) {
+      cancelAnimationFrame(rafId)
+    }
   })
 
-  // 监听拖拽悬停
-  // 注意：Golden Layout 的具体事件可能需要根据实际 API 调整
+  gl.on('itemDropped', () => {
+    const dragEndTime = performance.now()
+    console.log(`[LayoutContainer] Drag duration: ${dragEndTime - dragStartTime}ms`)
+
+    isDragging.value = false
+    if (rafId) {
+      cancelAnimationFrame(rafId)
+      rafId = null
+    }
+  })
 }
 
 // 清理
 onUnmounted(() => {
+  if (rafId) {
+    cancelAnimationFrame(rafId)
+  }
   layoutStore.destroyLayout()
 })
 
@@ -92,7 +111,12 @@ watch(
     // 如果有新标签，添加到布局
     if (newTabs.length > (oldTabs?.length || 0)) {
       const newTab = newTabs[newTabs.length - 1]
-      layoutStore.addTabToLayout(newTab.id, newTab)
+
+      // 使用 rAF 优化布局更新
+      rafId = requestAnimationFrame(() => {
+        layoutStore.addTabToLayout(newTab.id, newTab)
+        rafId = null
+      })
     }
   },
   { deep: true }
