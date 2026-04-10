@@ -1,7 +1,7 @@
 <template>
   <div class="app-container" :class="themeClass">
-    <ActivityBar />
-    <Sidebar />
+    <ActivityBar :items="menuItems" :active-id="activeModule" @select="activeModule = $event" />
+    <Sidebar :active-module="activeModule" />
     <TabContainer />
     <SettingsButton />
     <SettingsDialog v-model="settingsVisible" />
@@ -9,7 +9,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { Chat, Setting } from '@element-plus/icons-vue'
 import { useThemeStore } from '@/stores/theme'
 import ActivityBar from '@/components/ActivityBar.vue'
 import Sidebar from '@/components/Sidebar.vue'
@@ -18,6 +19,13 @@ import SettingsButton from '@/components/SettingsButton.vue'
 import SettingsDialog from '@/components/SettingsDialog.vue'
 
 const themeStore = useThemeStore()
+const activeModule = ref('ai')
+
+const menuItems = [
+  { id: 'ai', icon: Chat },
+  { id: 'settings', icon: Setting }
+]
+
 const settingsVisible = computed({
   get: () => themeStore.settingsVisible,
   set: (val) => themeStore.setSettingsVisible(val)
