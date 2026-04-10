@@ -48,12 +48,6 @@
         "script": "moonshot_kimi/inject.js"
     },
     {
-        "name": "Qwen",
-        "url": "https://chat.qwen.ai",
-        "icon": "aliyun_qianwen/logo.png",
-        "script": "aliyun_qianwen/inject.js"
-    },
-    {
         "name": "Tongyi",
         "url": "https://www.tongyi.com",
         "icon": "aliyun_tongyi/logo.png",
