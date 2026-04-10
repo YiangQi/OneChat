@@ -1,7 +1,13 @@
 <template>
   <div class="layout-container">
+    <!-- 错误状态 -->
+    <div v-if="layoutStore.error" class="error-state">
+      <p>布局系统错误: {{ layoutStore.error }}</p>
+      <button @click="layoutStore.clearError()" class="retry-button">重试</button>
+    </div>
+
     <!-- 空状态 -->
-    <div v-if="tabsStore.tabs.length === 0" class="empty-state">
+    <div v-else-if="tabsStore.tabs.length === 0" class="empty-state">
       <p>从左侧选择一个 AI 模型开始对话</p>
     </div>
 
@@ -100,6 +106,29 @@ watch(
   flex-direction: column;
   overflow: hidden;
   background: var(--bg-primary);
+}
+
+.error-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ff4444;
+  gap: 16px;
+}
+
+.retry-button {
+  padding: 8px 16px;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.retry-button:hover {
+  opacity: 0.9;
 }
 
 .empty-state {

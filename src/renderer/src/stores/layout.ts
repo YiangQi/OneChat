@@ -14,10 +14,14 @@ export const useLayoutStore = defineStore('layout', () => {
   const goldenLayout = ref<GoldenLayout | null>(null)
   const isInitialized = ref(false)
   const containerElement = ref<HTMLElement | null>(null)
+  const error = ref<string | null>(null)
 
   // 初始化 Golden Layout
   function initLayout(container: HTMLElement) {
-    if (isInitialized.value) return
+    if (isInitialized.value) {
+      console.warn('[LayoutStore] Already initialized')
+      return
+    }
 
     containerElement.value = container
 
@@ -36,6 +40,7 @@ export const useLayoutStore = defineStore('layout', () => {
       try {
         goldenLayout.value = new GoldenLayout(config, container)
         isInitialized.value = true
+        error.value = null
 
         // 监听布局变化
         goldenLayout.value.on('stateChanged', () => {
@@ -43,55 +48,63 @@ export const useLayoutStore = defineStore('layout', () => {
         })
 
         console.log('[LayoutStore] Golden Layout initialized')
-      } catch (error) {
-        console.error('[LayoutStore] Failed to initialize Golden Layout:', error)
+      } catch (err) {
+        console.error('[LayoutStore] Failed to initialize:', err)
+        error.value = 'Failed to initialize layout system'
+        isInitialized.value = false
       }
     }, 0)
   }
 
   // 销毁布局
   function destroyLayout() {
-    if (goldenLayout.value) {
-      goldenLayout.value.destroy()
-      goldenLayout.value = null
-      isInitialized.value = false
+    try {
+      if (goldenLayout.value) {
+        goldenLayout.value.destroy()
+        goldenLayout.value = null
+        isInitialized.value = false
+      }
+    } catch (err) {
+      console.error('[LayoutStore] Error destroying layout:', err)
     }
   }
 
   // 添加标签到布局
   function addTabToLayout(tabId: string, tabData: any) {
     if (!goldenLayout.value || !isInitialized.value) {
-      console.warn('[LayoutStore] Golden Layout not initialized')
+      console.warn('[LayoutStore] Cannot add tab: layout not initialized')
       return
     }
 
-    // 如果根节点为空，创建一个 stack
-    const root = goldenLayout.value.root
-    if (!root || !root.contentItems || root.contentItems.length === 0) {
-      // 创建初始 stack
-      const config = {
-        type: 'stack',
-        content: [{
-          type: 'component',
-          componentName: 'webview-container',
-          componentState: { tabId, ...tabData },
-          title: tabData.model?.name || 'New Tab'
-        }]
-      }
-      goldenLayout.value.loadLayout({ content: [config] })
-    } else {
-      // 添加到现有 stack
-      const firstStack = findFirstStack(root)
-      if (firstStack) {
-        const componentConfig = {
-          type: 'component',
-          componentName: 'webview-container',
-          componentState: { tabId, ...tabData },
-          title: tabData.model?.name || 'New Tab'
+    try {
+      const root = goldenLayout.value.root
+
+      if (!root || !root.contentItems || root.contentItems.length === 0) {
+        const config = {
+          type: 'stack',
+          content: [{
+            type: 'component',
+            componentName: 'webview-container',
+            componentState: { tabId, ...tabData },
+            title: tabData.model?.name || 'New Tab'
+          }]
         }
-        // 使用 GL API 添加组件
-        firstStack.addChild(componentConfig)
+        goldenLayout.value.loadLayout({ content: [config] })
+      } else {
+        const firstStack = findFirstStack(root)
+        if (firstStack) {
+          const componentConfig = {
+            type: 'component',
+            componentName: 'webview-container',
+            componentState: { tabId, ...tabData },
+            title: tabData.model?.name || 'New Tab'
+          }
+          firstStack.addChild(componentConfig)
+        }
       }
+    } catch (err) {
+      console.error('[LayoutStore] Error adding tab to layout:', err)
+      error.value = 'Failed to add tab to layout'
     }
   }
 
@@ -102,79 +115,73 @@ export const useLayoutStore = defineStore('layout', () => {
       return
     }
 
-    const gl = goldenLayout.value
-    const root = gl.root
+    try {
+      const gl = goldenLayout.value
+      const root = gl.root
 
-    if (!root || !root.contentItems || root.contentItems.length === 0) {
-      console.warn('[LayoutStore] Cannot split: no content')
-      return
-    }
-
-    // 查找包含该标签的 stack
-    const targetStack = findStackByTabId(root, tabId)
-
-    if (!targetStack) {
-      console.warn('[LayoutStore] Cannot split: tab not found')
-      return
-    }
-
-    // 获取父容器
-    const parent = targetStack.parent
-
-    if (!parent) {
-      console.warn('[LayoutStore] Cannot split: no parent')
-      return
-    }
-
-    // 创建新的行/列容器
-    const newContainerConfig = {
-      type: direction,
-      content: [
-        { type: 'stack', content: [] },
-        { type: 'stack', content: [] }
-      ]
-    }
-
-    // 如果父容器已经是相同方向的行/列，直接添加新的 stack
-    if (parent.type === direction) {
-      const newStackConfig = {
-        type: 'stack',
-        content: [{
-          type: 'component',
-          componentName: 'webview-container',
-          componentState: {
-            tabId: `${tabId}-split`,
-            title: 'New Pane'
-          },
-          title: 'New Pane'
-        }]
-      }
-      parent.addChild(newStackConfig)
-    } else {
-      // 需要创建新的方向容器
-      const index = parent.contentItems?.indexOf(targetStack) ?? -1
-
-      if (index === -1) {
-        console.warn('[LayoutStore] Cannot find stack index')
+      if (!root || !root.contentItems || root.contentItems.length === 0) {
+        console.warn('[LayoutStore] Cannot split: no content')
         return
       }
 
-      // 替换当前 stack 为新的方向容器
-      const newContainer = gl.createContentItem(newContainerConfig, parent)
+      const targetStack = findStackByTabId(root, tabId)
 
-      // 移除原 stack
-      parent.removeChild(targetStack)
-
-      // 添加新容器
-      parent.addChild(newContainer, index)
-
-      // 将原 stack 添加到新容器的第一个位置
-      if (newContainer.contentItems && newContainer.contentItems.length > 0) {
-        newContainer.contentItems[0].addChild(targetStack)
+      if (!targetStack) {
+        console.warn('[LayoutStore] Cannot split: tab not found')
+        return
       }
-    }
 
-    console.log('[LayoutStore] Split tab', tabId, 'in direction', direction)
+      const parent = targetStack.parent
+
+      if (!parent) {
+        console.warn('[LayoutStore] Cannot split: no parent')
+        return
+      }
+
+      const newContainerConfig = {
+        type: direction,
+        content: [
+          { type: 'stack', content: [] },
+          { type: 'stack', content: [] }
+        ]
+      }
+
+      if (parent.type === direction) {
+        const newStackConfig = {
+          type: 'stack',
+          content: [{
+            type: 'component',
+            componentName: 'webview-container',
+            componentState: {
+              tabId: `${tabId}-split`,
+              title: 'New Pane'
+            },
+            title: 'New Pane'
+          }]
+        }
+        parent.addChild(newStackConfig)
+      } else {
+        const index = parent.contentItems?.indexOf(targetStack) ?? -1
+
+        if (index === -1) {
+          console.warn('[LayoutStore] Cannot find stack index')
+          return
+        }
+
+        const newContainer = gl.createContentItem(newContainerConfig, parent)
+        parent.removeChild(targetStack)
+        parent.addChild(newContainer, index)
+
+        if (newContainer.contentItems && newContainer.contentItems.length > 0) {
+          newContainer.contentItems[0].addChild(targetStack)
+        }
+      }
+
+      console.log('[LayoutStore] Split tab', tabId, 'in direction', direction)
+    } catch (err) {
+      console.error('[LayoutStore] Error splitting tab:', err)
+      error.value = 'Failed to split pane'
+    }
   }
 
   // 辅助函数：根据 tabId 查找 stack
@@ -206,8 +213,13 @@ export const useLayoutStore = defineStore('layout', () => {
   function moveTab(tabId: string, targetPaneId: string) {
     if (!goldenLayout.value || !isInitialized.value) return
 
-    // TODO: 实现移动逻辑
-    console.log('[LayoutStore] Move tab', tabId, 'to', targetPaneId)
+    try {
+      // TODO: 实现移动逻辑
+      console.log('[LayoutStore] Move tab', tabId, 'to', targetPaneId)
+    } catch (err) {
+      console.error('[LayoutStore] Error moving tab:', err)
+      error.value = 'Failed to move tab'
+    }
   }
 
   // 辅助函数：查找第一个 stack
@@ -231,18 +243,30 @@ export const useLayoutStore = defineStore('layout', () => {
   // 获取当前布局配置
   function getLayoutConfig(): LayoutConfig | null {
     if (!goldenLayout.value || !isInitialized.value) return null
-    return goldenLayout.value.toConfig()
+    try {
+      return goldenLayout.value.toConfig()
+    } catch (err) {
+      console.error('[LayoutStore] Error getting layout config:', err)
+      return null
+    }
+  }
+
+  // 清除错误
+  function clearError() {
+    error.value = null
   }
 
   return {
     goldenLayout,
     isInitialized,
     containerElement,
+    error,
     initLayout,
     destroyLayout,
     addTabToLayout,
     splitTab,
     moveTab,
-    getLayoutConfig
+    getLayoutConfig,
+    clearError
   }
 })
