@@ -88,11 +88,62 @@ export const usePanelStore = defineStore('panel', () => {
     return search(panels.value)
   }
 
+  function splitPanel(
+    targetPanelId: string,
+    position: 'before' | 'after',
+    direction: 'horizontal' | 'vertical'
+  ) {
+    const targetPanel = findPanel(targetPanelId)
+    if (!targetPanel) return
+
+    const parent = findParentPanel(targetPanelId)
+
+    const newPanel: Panel = {
+      id: `panel-${Date.now()}`,
+      tabs: [],
+      activeTabId: '',
+      size: 50
+    }
+
+    if (parent) {
+      // 目标面板已经有父级（已经是分屏状态）
+      if (!parent.children) return
+
+      const targetIndex = parent.children.findIndex(p => p.id === targetPanelId)
+      if (position === 'before') {
+        parent.children.splice(targetIndex, 0, newPanel)
+      } else {
+        parent.children.splice(targetIndex + 1, 0, newPanel)
+      }
+
+      // 更新 sizes
+      const newSize = 100 / (parent.children.length + 1)
+      parent.sizes = parent.children.map(() => newSize)
+    } else {
+      // 创建新的父级面板
+      const newParent: Panel = {
+        id: `panel-parent-${Date.now()}`,
+        direction,
+        children: position === 'before' ? [newPanel, targetPanel] : [targetPanel, newPanel],
+        sizes: [50, 50]
+      }
+
+      // 从根列表中移除目标面板
+      const rootIndex = panels.value.findIndex(p => p.id === targetPanelId)
+      if (rootIndex !== -1) {
+        panels.value.splice(rootIndex, 1)
+      }
+
+      panels.value.push(newParent)
+    }
+  }
+
   return {
     panels,
     dragPreview,
     flatPanels,
     findPanel,
-    findParentPanel
+    findParentPanel,
+    splitPanel
   }
 })
