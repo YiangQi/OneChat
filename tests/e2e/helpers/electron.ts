@@ -9,6 +9,9 @@ export async function launchElectronApp() {
   // In development, we use the main process entry point
   // In production, we use the built executable
 
+  // 清除 ELECTRON_RUN_AS_NODE 环境变量，避免 Electron 以 Node.js 模式运行
+  delete process.env.ELECTRON_RUN_AS_NODE
+
   const isDev = process.env.NODE_ENV !== 'production'
 
   let electronApp: ElectronApplication
