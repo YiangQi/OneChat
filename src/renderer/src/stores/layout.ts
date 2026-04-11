@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
-// 导入 Golden Layout 类型
-import type { GoldenLayout, LayoutConfig } from 'golden-layout'
+// 导入 Golden Layout
+import { GoldenLayout } from 'golden-layout'
+import type { LayoutConfig } from 'golden-layout'
 
 export interface PaneState {
   id: string
