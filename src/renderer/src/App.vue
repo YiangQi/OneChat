@@ -2,7 +2,7 @@
   <div class="app-container" :class="themeClass">
     <ActivityBar :items="menuItems" :active-id="activeModule" @select="activeModule = $event" />
     <Sidebar :active-module="activeModule" />
-    <TabContainer />
+    <SplitLayoutContainer />
     <SettingsButton />
     <SettingsDialog v-model="settingsVisible" />
   </div>
@@ -14,7 +14,7 @@ import { ChatDotRound, Setting } from '@element-plus/icons-vue'
 import { useThemeStore } from '@/stores/theme'
 import ActivityBar from '@/components/ActivityBar.vue'
 import Sidebar from '@/components/Sidebar.vue'
-import TabContainer from '@/components/TabContainer.vue'
+import SplitLayoutContainer from '@/components/SplitLayoutContainer.vue'
 import SettingsButton from '@/components/SettingsButton.vue'
 import SettingsDialog from '@/components/SettingsDialog.vue'
 
