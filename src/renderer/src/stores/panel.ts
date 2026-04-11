@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Tab } from './tabs'
 import { useTabsStore } from './tabs'
 
@@ -36,6 +36,29 @@ export const usePanelStore = defineStore('panel', () => {
     position: null,
     targetPanelId: null
   })
+
+  // Sync tabs from tabsStore to default panel
+  const tabsStore = useTabsStore()
+  watch(
+    () => tabsStore.tabs,
+    (newTabs) => {
+      const defaultPanel = findPanel('panel-default')
+      if (defaultPanel) {
+        // Update tabs array reference (not the content)
+        defaultPanel.tabs = newTabs
+        // Update active tab
+        defaultPanel.activeTabId = tabsStore.activeTabId
+      }
+    },
+    { deep: true }
+  )
+
+  // Also sync on initial load
+  const defaultPanel = findPanel('panel-default')
+  if (defaultPanel) {
+    defaultPanel.tabs = tabsStore.tabs
+    defaultPanel.activeTabId = tabsStore.activeTabId
+  }
 
   // Getters
   const flatPanels = computed(() => {

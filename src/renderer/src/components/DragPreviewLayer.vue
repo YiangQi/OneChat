@@ -1,8 +1,7 @@
 <template>
   <div
-    v-if="panelStore.dragPreview.visible"
     class="drag-preview"
-    :class="previewClass"
+    :class="[previewClass, { 'drag-preview--visible': panelStore.dragPreview.visible }]"
   ></div>
 </template>
 
@@ -27,6 +26,12 @@ const previewClass = computed(() => {
   pointer-events: none;
   z-index: 1000;
   transition: all 0.15s ease-out;
+  /* Hidden by default */
+  display: none;
+}
+
+.drag-preview--visible {
+  display: block;
 }
 
 .preview-left {
