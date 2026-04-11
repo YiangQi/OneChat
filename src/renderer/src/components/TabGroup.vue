@@ -2,6 +2,7 @@
   <div
     ref="tabGroupRef"
     class="tab-group"
+    :data-testid="`panel-${panel.id}`"
     @dragover="handleDragOver"
     @drop="handleDrop"
     @dragleave="handleDragLeave"
@@ -13,6 +14,7 @@
         :key="tab.id"
         :class="['tab', { active: tab.id === panel.activeTabId }]"
         :draggable="true"
+        :data-testid="`tab-${tab.id}`"
         @dragstart="handleDragStart($event, tab)"
         @click="activateTab(tab.id)"
       >
