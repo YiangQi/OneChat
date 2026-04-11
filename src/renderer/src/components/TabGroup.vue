@@ -40,6 +40,7 @@
 
 <script setup lang="ts">
 import { Close } from '@element-plus/icons-vue'
+import { debounce } from 'lodash-es'
 import { ref } from 'vue'
 import { useTabsStore } from '@/stores/tabs'
 import { usePanelStore } from '@/stores/panel'
@@ -89,11 +90,14 @@ function handleDragStart(e: DragEvent, tab: Tab) {
   }
 }
 
-function handleDragOver(e: DragEvent) {
+const handleDragOverDebounced = debounce((e: DragEvent) => {
   if (!tabGroupRef.value) return
-
   const rect = tabGroupRef.value.getBoundingClientRect()
   panelStore.handleDragOver(e, props.panel.id, rect)
+}, 16) // 约 60fps
+
+function handleDragOver(e: DragEvent) {
+  handleDragOverDebounced(e)
 }
 
 function handleDragLeave() {
