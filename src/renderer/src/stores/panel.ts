@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import type { Tab } from './tabs'
 
 const MAX_PANELS = 6
+const EDGE_THRESHOLD = 50  // 边缘检测阈值 50px
 
 export interface Panel {
   id: string
@@ -147,6 +148,25 @@ export const usePanelStore = defineStore('panel', () => {
     }
   }
 
+  function handleDragOver(e: DragEvent, targetPanelId: string, rect: DOMRect) {
+    e.preventDefault()
+
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    if (x < EDGE_THRESHOLD) {
+      dragPreview.value = { visible: true, position: 'left', targetPanelId }
+    } else if (x > rect.width - EDGE_THRESHOLD) {
+      dragPreview.value = { visible: true, position: 'right', targetPanelId }
+    } else if (y < EDGE_THRESHOLD) {
+      dragPreview.value = { visible: true, position: 'top', targetPanelId }
+    } else if (y > rect.height - EDGE_THRESHOLD) {
+      dragPreview.value = { visible: true, position: 'bottom', targetPanelId }
+    } else {
+      dragPreview.value = { visible: true, position: 'center', targetPanelId }
+    }
+  }
+
   return {
     panels,
     dragPreview,
@@ -154,6 +174,7 @@ export const usePanelStore = defineStore('panel', () => {
     findPanel,
     findParentPanel,
     splitPanel,
-    canCreateNewPanel
+    canCreateNewPanel,
+    handleDragOver
   }
 })
