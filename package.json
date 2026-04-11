@@ -18,7 +18,6 @@
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
     "element-plus": "^2.5.0",
-    "golden-layout": "^2.6.0",
     "pinia": "^2.1.0",
     "vue": "^3.4.0"
   },
