@@ -54,7 +54,30 @@ export async function getMainWindow(electronApp: ElectronApplication): Promise<P
     throw new Error('No windows found')
   }
 
-  return windows[0]
+  const mainWindow = windows[0]
+
+  // 捕获 console log
+  mainWindow.on('console', msg => {
+    const type = msg.type()
+    const text = msg.text()
+
+    if (type === 'error') {
+      console.error(`[Renderer Console ERROR] ${text}`)
+    } else if (type === 'warning') {
+      console.warn(`[Renderer Console WARN] ${text}`)
+    } else if (type === 'log') {
+      console.log(`[Renderer Console LOG] ${text}`)
+    } else {
+      console.log(`[Renderer Console ${type}] ${text}`)
+    }
+  })
+
+  // 捕获页面错误
+  mainWindow.on('pageerror', error => {
+    console.error(`[Renderer Page Error]`, error)
+  })
+
+  return mainWindow
 }
 
 /**
