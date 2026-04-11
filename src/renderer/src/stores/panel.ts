@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Tab } from './tabs'
+import { useTabsStore } from './tabs'
 
 const MAX_PANELS = 6
 const EDGE_THRESHOLD = 50  // 边缘检测阈值 50px
@@ -167,6 +168,160 @@ export const usePanelStore = defineStore('panel', () => {
     }
   }
 
+  function moveTabToPanel(tabId: string, sourcePanelId: string, targetPanelId: string) {
+    const sourcePanel = findPanel(sourcePanelId)
+    const targetPanel = findPanel(targetPanelId)
+
+    if (!sourcePanel || !targetPanel) return
+
+    // 找到标签页
+    const tabIndex = sourcePanel.tabs.findIndex(t => t.id === tabId)
+    if (tabIndex === -1) return
+
+    const [tab] = sourcePanel.tabs.splice(tabIndex, 1)
+
+    // 如果源面板没有激活标签页了，清空 activeTabId
+    if (sourcePanel.activeTabId === tabId) {
+      sourcePanel.activeTabId = sourcePanel.tabs[0]?.id || ''
+    }
+
+    // 添加到目标面板
+    targetPanel.tabs.push(tab)
+    targetPanel.activeTabId = tab.id
+
+    // 注意：不在这里调用 closePanel，让调用者决定是否需要关闭
+  }
+
+  function handleDrop(tabId: string, position: string, targetPanelId: string) {
+    const targetPanel = findPanel(targetPanelId)
+    if (!targetPanel) return
+
+    // 找到标签页所在的源面板
+    let sourcePanelId: string | null = null
+    for (const panel of flatPanels.value) {
+      if (panel.tabs.some(t => t.id === tabId)) {
+        sourcePanelId = panel.id
+        break
+      }
+    }
+
+    if (!sourcePanelId) return
+
+    // 获取分割前的面板数量
+    const beforePanelCount = flatPanels.value.length
+    let newPanelId: string | null = null
+
+    switch (position) {
+      case 'left':
+        splitPanel(targetPanelId, 'before', 'horizontal')
+        // 找到新创建的面板（分割后面板数量增加）
+        if (flatPanels.value.length > beforePanelCount) {
+          const newPanels = flatPanels.value.filter(p =>
+            !p.tabs || p.tabs.length === 0
+          )
+          newPanelId = newPanels[0]?.id || null
+        }
+        if (newPanelId && sourcePanelId !== newPanelId) {
+          moveTabToPanel(tabId, sourcePanelId, newPanelId)
+        }
+        break
+
+      case 'right':
+        splitPanel(targetPanelId, 'after', 'horizontal')
+        if (flatPanels.value.length > beforePanelCount) {
+          const newPanels = flatPanels.value.filter(p =>
+            !p.tabs || p.tabs.length === 0
+          )
+          newPanelId = newPanels[0]?.id || null
+        }
+        if (newPanelId && sourcePanelId !== newPanelId) {
+          moveTabToPanel(tabId, sourcePanelId, newPanelId)
+        }
+        break
+
+      case 'top':
+        splitPanel(targetPanelId, 'before', 'vertical')
+        if (flatPanels.value.length > beforePanelCount) {
+          const newPanels = flatPanels.value.filter(p =>
+            !p.tabs || p.tabs.length === 0
+          )
+          newPanelId = newPanels[0]?.id || null
+        }
+        if (newPanelId && sourcePanelId !== newPanelId) {
+          moveTabToPanel(tabId, sourcePanelId, newPanelId)
+        }
+        break
+
+      case 'bottom':
+        splitPanel(targetPanelId, 'after', 'vertical')
+        if (flatPanels.value.length > beforePanelCount) {
+          const newPanels = flatPanels.value.filter(p =>
+            !p.tabs || p.tabs.length === 0
+          )
+          newPanelId = newPanels[0]?.id || null
+        }
+        if (newPanelId && sourcePanelId !== newPanelId) {
+          moveTabToPanel(tabId, sourcePanelId, newPanelId)
+        }
+        break
+
+      case 'center':
+        if (sourcePanelId !== targetPanelId) {
+          moveTabToPanel(tabId, sourcePanelId, targetPanelId)
+        }
+        break
+    }
+
+    // 隐藏预览
+    dragPreview.value = {
+      visible: false,
+      position: null,
+      targetPanelId: null
+    }
+  }
+
+  function closePanel(panelId: string) {
+    // Placeholder for now - will be implemented in Task 12
+    const panel = findPanel(panelId)
+    const parent = findParentPanel(panelId)
+
+    if (panel && panel.tabs.length === 0) {
+      if (parent && parent.children) {
+        // 从父面板中移除
+        parent.children = parent.children.filter(p => p.id !== panelId)
+
+        // 如果父面板只剩一个子面板，合并
+        if (parent.children.length === 1) {
+          mergePanel(parent)
+        }
+      } else {
+        // 直接从根列表中移除
+        const rootIndex = panels.value.findIndex(p => p.id === panelId)
+        if (rootIndex !== -1) {
+          panels.value.splice(rootIndex, 1)
+        }
+      }
+    }
+  }
+
+  function mergePanel(parentPanel: Panel) {
+    // 将父面板替换为唯一的子面板
+    if (!parentPanel.children || parentPanel.children.length !== 1) return
+
+    const onlyChild = parentPanel.children[0]
+
+    // 找到父面板在根列表中的位置
+    const rootIndex = panels.value.findIndex(p => p.id === parentPanel.id)
+
+    if (rootIndex !== -1) {
+      // 移除父面板
+      panels.value.splice(rootIndex, 1)
+
+      // 添加子面板到根列表
+      panels.value.push(onlyChild)
+    }
+  }
+
   return {
     panels,
     dragPreview,
@@ -175,6 +330,10 @@ export const usePanelStore = defineStore('panel', () => {
     findParentPanel,
     splitPanel,
     canCreateNewPanel,
-    handleDragOver
+    handleDragOver,
+    moveTabToPanel,
+    handleDrop,
+    closePanel,
+    mergePanel
   }
 })
