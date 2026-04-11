@@ -144,3 +144,5 @@ vite.config.ts.timestamp-*
 .vite/
 
 .superpowers
+playwright-report/*
+test-results/*

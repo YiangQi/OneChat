@@ -40,21 +40,32 @@ export const useLayoutStore = defineStore('layout', () => {
     setTimeout(() => {
       try {
         goldenLayout.value = new GoldenLayout(config, container)
-        isInitialized.value = true
-        error.value = null
+
+        // 不在这里设置 isInitialized
+        // isInitialized 将在 callInit() 完成后设置
 
         // 监听布局变化
         goldenLayout.value.on('stateChanged', () => {
           // 可以在这里保存布局配置
         })
 
-        console.log('[LayoutStore] Golden Layout initialized')
+        console.log('[LayoutStore] Golden Layout created (not initialized yet), root:', goldenLayout.value.root)
       } catch (err) {
         console.error('[LayoutStore] Failed to initialize:', err)
         error.value = 'Failed to initialize layout system'
         isInitialized.value = false
       }
     }, 0)
+  }
+
+  // 调用 init() 来完成初始化（在组件工厂注册后调用）
+  function callInit() {
+    if (goldenLayout.value && !goldenLayout.value.isInitialised) {
+      goldenLayout.value.init()
+      // init() 完成后才设置 isInitialized
+      isInitialized.value = true
+      console.log('[LayoutStore] Golden Layout init() called, isInitialised:', goldenLayout.value.isInitialised, 'root:', goldenLayout.value.root)
+    }
   }
 
   // 销毁布局
@@ -72,6 +83,8 @@ export const useLayoutStore = defineStore('layout', () => {
 
   // 添加标签到布局
   function addTabToLayout(tabId: string, tabData: any) {
+    console.log('[LayoutStore] addTabToLayout called:', tabId, tabData?.model?.name)
+
     if (!goldenLayout.value || !isInitialized.value) {
       console.warn('[LayoutStore] Cannot add tab: layout not initialized')
       return
@@ -79,28 +92,61 @@ export const useLayoutStore = defineStore('layout', () => {
 
     try {
       const root = goldenLayout.value.root
+      console.log('[LayoutStore] Root:', root, 'contentItems:', root?.contentItems?.length || 0)
 
-      if (!root || !root.contentItems || root.contentItems.length === 0) {
-        const config = {
-          type: 'stack',
+      if (!root) {
+        console.error('[LayoutStore] Root is null!')
+        return
+      }
+
+      // 创建组件配置
+      const componentConfig = {
+        type: 'component',
+        componentName: 'webview-container',
+        componentState: { tabId, tabData },
+        title: tabData.model?.name || 'New Tab',
+        id: tabId
+      }
+
+      if (!root.contentItems || root.contentItems.length === 0) {
+        console.log('[LayoutStore] Loading layout with stack and component')
+        // 使用 loadLayout 加载完整布局
+        const layoutConfig: LayoutConfig = {
+          settings: {
+            showPopoutIcon: false,
+            showMaximiseIcon: false,
+            showCloseIcon: false
+          },
           content: [{
-            type: 'component',
-            componentName: 'webview-container',
-            componentState: { tabId, ...tabData },
-            title: tabData.model?.name || 'New Tab'
+            type: 'stack',
+            content: [componentConfig]
           }]
         }
-        goldenLayout.value.loadLayout({ content: [config] })
+        goldenLayout.value.loadLayout(layoutConfig)
+        console.log('[LayoutStore] Layout loaded')
       } else {
         const firstStack = findFirstStack(root)
         if (firstStack) {
-          const componentConfig = {
-            type: 'component',
-            componentName: 'webview-container',
-            componentState: { tabId, ...tabData },
-            title: tabData.model?.name || 'New Tab'
+          console.log('[LayoutStore] Adding child to existing stack')
+          // 对于已存在的 stack，使用 loadLayout 更新其内容
+          const currentConfig = goldenLayout.value.toConfig()
+
+          // 找到第一个 stack 并添加组件
+          if (currentConfig.content && currentConfig.content.length > 0) {
+            const firstStackConfig = currentConfig.content[0]
+            if (firstStackConfig.type === 'stack') {
+              if (!firstStackConfig.content) {
+                firstStackConfig.content = []
+              }
+              firstStackConfig.content.push(componentConfig)
+
+              // 重新加载布局
+              goldenLayout.value.loadLayout(currentConfig)
+              console.log('[LayoutStore] Layout updated with new component')
+            }
           }
-          firstStack.addChild(componentConfig)
+        } else {
+          console.warn('[LayoutStore] No stack found')
         }
       }
     } catch (err) {
@@ -263,6 +309,7 @@ export const useLayoutStore = defineStore('layout', () => {
     containerElement,
     error,
     initLayout,
+    callInit,
     destroyLayout,
     addTabToLayout,
     splitTab,

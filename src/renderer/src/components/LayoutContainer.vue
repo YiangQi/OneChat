@@ -22,7 +22,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { createApp } from 'vue'
 import { useTabsStore } from '@/stores/tabs'
 import { useLayoutStore } from '@/stores/layout'
 import GoldenLayoutWebView from './GoldenLayoutWebView.vue'
@@ -33,33 +34,55 @@ const layoutStore = useLayoutStore()
 const goldenLayoutContainer = ref<HTMLElement | null>(null)
 const isDragging = ref(false)
 let rafId: number | null = null
+const vueInstances = new Map<any, { app: any; wrapper: HTMLElement }>()
 
 // 初始化 Golden Layout
 onMounted(() => {
   if (goldenLayoutContainer.value) {
     layoutStore.initLayout(goldenLayoutContainer.value)
 
-    // 等待 GL 初始化后注册组件
+    // 等待 GL 实例创建后立即注册组件（在 init 之前）
     nextTick(() => {
-      // 监听初始化完成
-      const checkInit = setInterval(() => {
-        if (layoutStore.goldenLayout && layoutStore.isInitialized) {
-          clearInterval(checkInit)
-          // 注册 WebView 容器组件
+      const checkInstance = setInterval(() => {
+        if (layoutStore.goldenLayout) {
+          clearInterval(checkInstance)
+
+          // 使用 registerComponent 注册 Vue 3 组件
+          // 注意：虽然这个 API 被标记为废弃，但它对 Vue 3 更可靠
           layoutStore.goldenLayout.registerComponent(
             'webview-container',
-            GoldenLayoutWebView
+            (container: any, componentState: any) => {
+              console.log('[LayoutContainer] Creating webview container', componentState)
+
+              const wrapper = document.createElement('div')
+              wrapper.className = 'gl-webview-wrapper'
+
+              const app = createApp(GoldenLayoutWebView, {
+                tabId: componentState.tabId,
+                tabData: componentState.tabData
+              })
+
+              app.mount(wrapper)
+
+              // 保存引用以便清理
+              vueInstances.set(container, { app, wrapper })
+
+              // 返回容器元素
+              return wrapper
+            }
           )
 
-          // 监听拖拽事件
-          setupDragListeners()
+          console.log('[LayoutContainer] Registered component BEFORE init')
 
-          console.log('[LayoutContainer] Registered component and drag listeners')
+          // 注册完组件后调用 init()
+          layoutStore.callInit()
+
+          // 设置拖拽监听器
+          setupDragListeners()
         }
       }, 100)
 
-      // 5秒后停止检查
-      setTimeout(() => clearInterval(checkInit), 5000)
+      setTimeout(() => clearInterval(checkInstance), 5000)
     })
   }
 })
@@ -95,28 +118,53 @@ function setupDragListeners() {
 }
 
 // 清理
-onUnmounted(() => {
+onBeforeUnmount(() => {
+  // 清理所有 Vue 组件实例
+  vueInstances.forEach(({ app, wrapper }) => {
+    app.unmount()
+    wrapper.remove()
+  })
+  vueInstances.clear()
+
   if (rafId) {
     cancelAnimationFrame(rafId)
   }
   layoutStore.destroyLayout()
 })
 
+onUnmounted(() => {
+  // 额外的清理，确保布局被销毁
+  if (layoutStore.goldenLayout) {
+    layoutStore.destroyLayout()
+  }
+})
+
+// 用于跟踪已处理的 tab ID
+const processedTabIds = ref<Set<string>>(new Set())
+
 // 监听 tabs 变化，同步到 Golden Layout
 watch(
   () => tabsStore.tabs,
-  (newTabs, oldTabs) => {
-    if (!layoutStore.goldenLayout || !layoutStore.isInitialized) return
+  (newTabs) => {
+    console.log('[LayoutContainer] tabs changed:', newTabs.length)
 
-    // 如果有新标签，添加到布局
-    if (newTabs.length > (oldTabs?.length || 0)) {
-      const newTab = newTabs[newTabs.length - 1]
+    if (!layoutStore.goldenLayout || !layoutStore.isInitialized) {
+      console.warn('[LayoutContainer] Golden Layout not ready')
+      return
+    }
 
-      // 使用 rAF 优化布局更新
-      rafId = requestAnimationFrame(() => {
-        layoutStore.addTabToLayout(newTab.id, newTab)
-        rafId = null
-      })
+    // 找到未处理的新标签
+    for (const tab of newTabs) {
+      if (!processedTabIds.value.has(tab.id)) {
+        console.log('[LayoutContainer] Adding new tab to layout:', tab.id, tab.model?.name)
+        processedTabIds.value.add(tab.id)
+
+        // 使用 rAF 优化布局更新
+        rafId = requestAnimationFrame(() => {
+          layoutStore.addTabToLayout(tab.id, tab)
+          rafId = null
+        })
+      }
     }
   },
   { deep: true }

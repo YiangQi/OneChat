@@ -9,26 +9,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed } from 'vue'
 import WebViewContainer from './WebViewContainer.vue'
 import type { Tab } from '@/stores/tabs'
 
 const props = defineProps<{
-  container?: any
-  state?: {
-    tabId?: string
-    tabData?: Tab
-  }
+  tabId?: string
+  tabData?: Tab
 }>()
 
-const tabData = ref<Tab | null>(null)
-
-// Golden Layout 会调用这个方法来传递状态
-onMounted(() => {
-  if (props.state?.tabData) {
-    tabData.value = props.state.tabData
-  }
-})
+// 使用 computed 获取 tabData
+const tabData = computed(() => props.tabData || null)
 </script>
 
 <style scoped>
