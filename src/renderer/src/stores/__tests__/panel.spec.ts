@@ -73,3 +73,42 @@ describe('PanelStore - splitPanel', () => {
     expect(parentPanel?.children).toHaveLength(2)
   })
 })
+
+describe('PanelStore - 面板数量限制', () => {
+  const MAX_PANELS = 6
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('不应该超过最大面板数量', () => {
+    const panelStore = usePanelStore()
+
+    // 尝试创建超过限制的面板
+    for (let i = 0; i < 10; i++) {
+      const panels = panelStore.flatPanels
+      if (panels.length > 0 && panelStore.canCreateNewPanel()) {
+        panelStore.splitPanel(panels[0].id, 'after', 'horizontal')
+      }
+    }
+
+    // 应该不超过 MAX_PANELS
+    expect(panelStore.flatPanels.length).toBeLessThanOrEqual(MAX_PANELS)
+  })
+
+  it('canCreateNewPanel 应该正确返回', () => {
+    const panelStore = usePanelStore()
+
+    expect(panelStore.canCreateNewPanel()).toBe(true)
+
+    // 创建到最大数量
+    for (let i = 1; i < MAX_PANELS; i++) {
+      const panels = panelStore.flatPanels
+      if (panelStore.canCreateNewPanel()) {
+        panelStore.splitPanel(panels[0].id, 'after', 'horizontal')
+      }
+    }
+
+    expect(panelStore.canCreateNewPanel()).toBe(false)
+  })
+})

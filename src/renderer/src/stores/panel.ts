@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Tab } from './tabs'
 
+const MAX_PANELS = 6
+
 export interface Panel {
   id: string
   tabs: Tab[]
@@ -88,11 +90,18 @@ export const usePanelStore = defineStore('panel', () => {
     return search(panels.value)
   }
 
+  function canCreateNewPanel(): boolean {
+    return flatPanels.value.length < MAX_PANELS
+  }
+
   function splitPanel(
     targetPanelId: string,
     position: 'before' | 'after',
     direction: 'horizontal' | 'vertical'
   ) {
+    // 检查是否可以创建新面板
+    if (!canCreateNewPanel()) return
+
     const targetPanel = findPanel(targetPanelId)
     if (!targetPanel) return
 
@@ -144,6 +153,7 @@ export const usePanelStore = defineStore('panel', () => {
     flatPanels,
     findPanel,
     findParentPanel,
-    splitPanel
+    splitPanel,
+    canCreateNewPanel
   }
 })
