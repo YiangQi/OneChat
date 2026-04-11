@@ -41,7 +41,7 @@
 <script setup lang="ts">
 import { Close } from '@element-plus/icons-vue'
 import { debounce } from 'lodash-es'
-import { ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useTabsStore } from '@/stores/tabs'
 import { usePanelStore } from '@/stores/panel'
 import type { Panel, Tab } from '@/stores/panel'
@@ -97,15 +97,34 @@ const handleDragOverDebounced = debounce((e: DragEvent) => {
 }, 16) // 约 60fps
 
 function handleDragOver(e: DragEvent) {
+  e.preventDefault() // 允许放置
   handleDragOverDebounced(e)
 }
 
-function handleDragLeave() {
-  // 不立即隐藏，等待可能的进入其他区域
+function handleDragLeave(e: DragEvent) {
+  // 检查是否真的离开了元素（而不是进入子元素）
+  const rect = tabGroupRef.value?.getBoundingClientRect()
+  if (!rect) return
+
+  const x = e.clientX
+  const y = e.clientY
+
+  // 如果鼠标在元素边界内，说明是进入了子元素，不应该隐藏预览
+  if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+    return
+  }
+
+  // 真正离开了元素，隐藏预览
+  panelStore.dragPreview = {
+    visible: false,
+    position: null,
+    targetPanelId: null
+  }
 }
 
 function handleDrop(e: DragEvent) {
   e.preventDefault()
+  e.stopPropagation()
 
   try {
     const data = e.dataTransfer?.getData('text/plain')
@@ -117,10 +136,34 @@ function handleDrop(e: DragEvent) {
     if (position) {
       panelStore.handleDrop(tabId, position, props.panel.id)
     }
+
+    // 隐藏预览
+    panelStore.dragPreview = {
+      visible: false,
+      position: null,
+      targetPanelId: null
+    }
   } catch (err) {
     console.error('[TabGroup] Drop error:', err)
   }
 }
+
+// 全局拖拽结束处理，确保预览层被清除
+function handleDragEnd() {
+  panelStore.dragPreview = {
+    visible: false,
+    position: null,
+    targetPanelId: null
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('dragend', handleDragEnd)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('dragend', handleDragEnd)
+})
 </script>
 
 <style scoped>

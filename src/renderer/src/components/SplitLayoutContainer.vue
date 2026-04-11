@@ -23,6 +23,7 @@ const panelStore = usePanelStore()
   display: flex;
   overflow: hidden;
   background: var(--bg-primary);
+  position: relative; /* 为预览层提供定位上下文 */
 }
 
 .splitpanes-root {

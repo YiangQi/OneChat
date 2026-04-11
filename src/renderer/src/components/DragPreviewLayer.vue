@@ -20,7 +20,7 @@ const previewClass = computed(() => {
 
 <style scoped>
 .drag-preview {
-  position: fixed;
+  position: absolute;
   background: rgba(59, 130, 246, 0.2);
   border: 2px dashed #3b82f6;
   pointer-events: none;
@@ -63,7 +63,7 @@ const previewClass = computed(() => {
 }
 
 .preview-center {
-  position: fixed;
+  position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
