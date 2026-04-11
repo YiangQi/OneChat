@@ -1,5 +1,6 @@
 <template>
   <div
+    ref="tabGroupRef"
     class="tab-group"
     @dragover="handleDragOver"
     @drop="handleDrop"
@@ -37,6 +38,7 @@
 
 <script setup lang="ts">
 import { Close } from '@element-plus/icons-vue'
+import { ref } from 'vue'
 import { useTabsStore } from '@/stores/tabs'
 import { usePanelStore } from '@/stores/panel'
 import type { Panel, Tab } from '@/stores/panel'
@@ -50,12 +52,13 @@ const props = defineProps<Props>()
 const tabsStore = useTabsStore()
 const panelStore = usePanelStore()
 
+const tabGroupRef = ref<HTMLElement>()
+
 function getIconPath(icon: string) {
   return `online://${icon}`
 }
 
 function activateTab(tabId: string) {
-  // 激活标签页的逻辑
   const panel = panelStore.findPanel(props.panel.id)
   if (panel) {
     panel.activeTabId = tabId
@@ -64,7 +67,14 @@ function activateTab(tabId: string) {
 
 function closeTab(tabId: string) {
   tabsStore.closeTab(tabId)
-  // TODO: 检查面板是否为空，如果为空则关闭面板
+
+  // 检查面板是否为空，如果为空则关闭面板
+  setTimeout(() => {
+    const panel = panelStore.findPanel(props.panel.id)
+    if (panel && panel.tabs.length === 0) {
+      panelStore.closePanel(panel.id)
+    }
+  }, 0)
 }
 
 function handleDragStart(e: DragEvent, tab: Tab) {
@@ -78,17 +88,32 @@ function handleDragStart(e: DragEvent, tab: Tab) {
 }
 
 function handleDragOver(e: DragEvent) {
-  e.preventDefault()
-  // TODO: 实现边缘检测逻辑
+  if (!tabGroupRef.value) return
+
+  const rect = tabGroupRef.value.getBoundingClientRect()
+  panelStore.handleDragOver(e, props.panel.id, rect)
 }
 
 function handleDragLeave() {
-  // TODO: 隐藏预览
+  // 不立即隐藏，等待可能的进入其他区域
 }
 
 function handleDrop(e: DragEvent) {
   e.preventDefault()
-  // TODO: 实现拖放逻辑
+
+  try {
+    const data = e.dataTransfer?.getData('text/plain')
+    if (!data) return
+
+    const { tabId } = JSON.parse(data)
+    const position = panelStore.dragPreview.position
+
+    if (position) {
+      panelStore.handleDrop(tabId, position, props.panel.id)
+    }
+  } catch (err) {
+    console.error('[TabGroup] Drop error:', err)
+  }
 }
 </script>
 
