@@ -112,3 +112,57 @@ describe('PanelStore - 面板数量限制', () => {
     expect(panelStore.canCreateNewPanel()).toBe(false)
   })
 })
+
+describe('PanelStore - 查找面板', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('应该能找到根面板', () => {
+    const panelStore = usePanelStore()
+    const defaultPanelId = panelStore.panels[0].id
+
+    const panel = panelStore.findPanel(defaultPanelId)
+
+    expect(panel).toBeDefined()
+    expect(panel?.id).toBe(defaultPanelId)
+  })
+
+  it('应该能找到嵌套的子面板', () => {
+    const panelStore = usePanelStore()
+    const defaultPanelId = panelStore.panels[0].id
+
+    panelStore.splitPanel(defaultPanelId, 'after', 'horizontal')
+
+    const parentPanel = panelStore.panels.find(p => p.children)
+    const childPanelId = parentPanel?.children?.[0].id
+
+    const childPanel = panelStore.findPanel(childPanelId!)
+
+    expect(childPanel).toBeDefined()
+    expect(childPanel?.id).toBe(childPanelId)
+  })
+
+  it('找不到的面板应该返回 undefined', () => {
+    const panelStore = usePanelStore()
+
+    const panel = panelStore.findPanel('non-existent-panel')
+
+    expect(panel).toBeUndefined()
+  })
+
+  it('应该能找到子面板的父面板', () => {
+    const panelStore = usePanelStore()
+    const defaultPanelId = panelStore.panels[0].id
+
+    panelStore.splitPanel(defaultPanelId, 'after', 'horizontal')
+
+    const parentPanel = panelStore.panels.find(p => p.children)
+    const childPanelId = parentPanel?.children?.[0].id
+
+    const foundParent = panelStore.findParentPanel(childPanelId!)
+
+    expect(foundParent).toBeDefined()
+    expect(foundParent?.id).toBe(parentPanel?.id)
+  })
+})
