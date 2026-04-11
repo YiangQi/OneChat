@@ -2,13 +2,13 @@
   <splitpanes
     v-if="panel.direction"
     :horizontal="panel.direction === 'horizontal'"
-    @resize="handleResize"
+    :resize="handleResize"
   >
     <pane
-      v-for="child in panel.children"
+      v-for="(child, index) in panel.children"
       :key="child.id"
       :min-size="20"
-      :size="child.size"
+      :size="panel.sizes?.[index] ?? child.size ?? 50"
     >
       <PanelRenderer
         v-if="child.children"

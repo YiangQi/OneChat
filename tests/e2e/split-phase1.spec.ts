@@ -64,27 +64,22 @@ test.describe('第一阶段：基础分屏功能', () => {
     const initialPanels = await mainWindow.locator('.tab-group').count()
 
     // Create a split panel using handleDrop (like the passing tests)
-    const createdSplit = await mainWindow.evaluate(() => {
+    await mainWindow.evaluate(() => {
       // @ts-ignore - Accessing store for testing
       const { panelStore, tabsStore } = window.$stores || {}
-      if (!panelStore || !tabsStore) return false
+      if (!panelStore || !tabsStore) return
 
       // Get the first tab
       const tabs = tabsStore.tabs
-      if (tabs.length === 0) return false
+      if (tabs.length === 0) return
 
       const tabId = tabs[0].id
 
       // Simulate drop to right
       panelStore.handleDrop(tabId, 'right', 'panel-default')
-
-      // Check if split was created
-      return panelStore.flatPanels.length >= 2
     })
 
-    expect(createdSplit).toBe(true)
-
-    // Wait for Vue to update the DOM
+    // Wait for DOM to update
     await mainWindow.waitForTimeout(500)
 
     // Verify panel count increased (this proves split was created and is resizable)

@@ -1,5 +1,5 @@
 <template>
-  <div v-show="visible" class="webview-container">
+  <div v-show="visible" class="webview-container" :class="{ 'is-dragging': panelStore.isDraggingGlobal }">
     <webview
       v-if="hasLoaded"
       :src="model.url"
@@ -16,12 +16,14 @@
 <script setup lang="ts">
 import { ref, watch, onUnmounted } from 'vue'
 import type { AIModel } from '@shared/types'
+import { usePanelStore } from '@/stores/panel'
 
 const props = defineProps<{
   model: AIModel
   visible?: boolean
 }>()
 
+const panelStore = usePanelStore()
 const hasLoaded = ref(false)
 const isDestroyed = ref(false)
 
@@ -39,7 +41,6 @@ watch(() => props.visible, (newVal) => {
   }
 }, { immediate: true })
 
-// 清理
 onUnmounted(() => {
   isDestroyed.value = true
 })
@@ -64,6 +65,11 @@ function handleFailLoad(event: any) {
   left: 0;
   right: 0;
   bottom: 0;
+}
+
+/* 拖拽时禁用 webview 的鼠标事件，让拖拽可以穿透 */
+.webview-container.is-dragging .webview {
+  pointer-events: none;
 }
 
 .webview {

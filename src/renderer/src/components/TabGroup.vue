@@ -69,24 +69,64 @@ function activateTab(tabId: string) {
 }
 
 function closeTab(tabId: string) {
-  tabsStore.closeTab(tabId)
+  // 先从当前面板的 tabs 数组中移除标签页
+  const panel = panelStore.findPanel(props.panel.id)
+  if (panel) {
+    const tabIndex = panel.tabs.findIndex(t => t.id === tabId)
+    if (tabIndex !== -1) {
+      panel.tabs.splice(tabIndex, 1)
+    }
 
-  // 检查面板是否为空，如果为空则关闭面板
-  setTimeout(() => {
-    const panel = panelStore.findPanel(props.panel.id)
-    if (panel && panel.tabs.length === 0) {
+    // 如果没有激活标签页了，清空 activeTabId
+    if (panel.activeTabId === tabId) {
+      panel.activeTabId = panel.tabs[0]?.id || ''
+    }
+
+    // 检查面板是否为空，如果为空则关闭面板
+    if (panel.tabs.length === 0) {
       panelStore.closePanel(panel.id)
     }
-  }, 0)
+  }
+
+  // 然后从 tabsStore 中移除
+  tabsStore.closeTab(tabId)
 }
 
 function handleDragStart(e: DragEvent, tab: Tab) {
   if (e.dataTransfer) {
+    // 设置全局拖拽状态 - 禁用所有 webview 的 pointer-events
+    panelStore.isDraggingGlobal = true
+
     e.dataTransfer.setData('text/plain', JSON.stringify({
       tabId: tab.id,
       sourcePanelId: props.panel.id
     }))
     e.dataTransfer.effectAllowed = 'move'
+
+    // 创建自定义的拖拽图像（幽灵元素）
+    const dragImage = e.target as HTMLElement
+    if (dragImage) {
+      const rect = dragImage.getBoundingClientRect()
+
+      // 创建克隆元素作为拖拽图像
+      const clone = dragImage.cloneNode(true) as HTMLElement
+      clone.style.position = 'absolute'
+      clone.style.top = '-9999px'
+      clone.style.left = '-9999px'
+      clone.style.width = `${rect.width}px`
+      clone.style.opacity = '0.8'
+      clone.classList.add('tab-dragging')
+
+      document.body.appendChild(clone)
+
+      // 设置自定义拖拽图像
+      e.dataTransfer.setDragImage(clone, rect.width / 2, rect.height / 2)
+
+      // 延迟移除克隆元素
+      setTimeout(() => {
+        document.body.removeChild(clone)
+      }, 0)
+    }
   }
 }
 
@@ -137,6 +177,9 @@ function handleDrop(e: DragEvent) {
       panelStore.handleDrop(tabId, position, props.panel.id)
     }
 
+    // 清除全局拖拽状态
+    panelStore.isDraggingGlobal = false
+
     // 隐藏预览
     panelStore.dragPreview = {
       visible: false,
@@ -145,11 +188,16 @@ function handleDrop(e: DragEvent) {
     }
   } catch (err) {
     console.error('[TabGroup] Drop error:', err)
+    // 确保在错误情况下也清除拖拽状态
+    panelStore.isDraggingGlobal = false
   }
 }
 
 // 全局拖拽结束处理，确保预览层被清除
 function handleDragEnd() {
+  // 清除全局拖拽状态 - 恢复 webview 的 pointer-events
+  panelStore.isDraggingGlobal = false
+
   panelStore.dragPreview = {
     visible: false,
     position: null,
@@ -219,6 +267,11 @@ onUnmounted(() => {
   background: var(--bg-primary);
   border-bottom: 2px solid var(--accent-color);
   margin-bottom: -1px;
+}
+
+.tab-dragging {
+  opacity: 0.8;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
 .tab-icon {

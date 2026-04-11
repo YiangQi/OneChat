@@ -19,6 +19,14 @@ export interface DragPreview {
   visible: boolean
   position: 'left' | 'right' | 'top' | 'bottom' | 'center' | null
   targetPanelId: string | null
+  panelBounds?: {
+    left: number
+    top: number
+    right: number
+    bottom: number
+    width: number
+    height: number
+  }
 }
 
 export const usePanelStore = defineStore('panel', () => {
@@ -36,6 +44,9 @@ export const usePanelStore = defineStore('panel', () => {
     position: null,
     targetPanelId: null
   })
+
+  // 全局拖拽状态 - 用于控制 webview 的 pointer-events
+  const isDraggingGlobal = ref(false)
 
   // Sync tabs from tabsStore to default panel
   const tabsStore = useTabsStore()
@@ -62,6 +73,25 @@ export const usePanelStore = defineStore('panel', () => {
 
   // Getters
   const flatPanels = computed(() => {
+    const result: Panel[] = []
+
+    function flatten(panelList: Panel[]) {
+      for (const panel of panelList) {
+        if (panel.children) {
+          flatten(panel.children)
+        } else if (panel.tabs.length > 0) {
+          // 只添加非空面板
+          result.push(panel)
+        }
+      }
+    }
+
+    flatten(panels.value)
+    return result
+  })
+
+  // 用于内部检查的计算属性，包括空面板
+  const allFlatPanels = computed(() => {
     const result: Panel[] = []
 
     function flatten(panelList: Panel[]) {
@@ -124,6 +154,8 @@ export const usePanelStore = defineStore('panel', () => {
     position: 'before' | 'after',
     direction: 'horizontal' | 'vertical'
   ) {
+    console.log('[splitPanel] Called with:', { targetPanelId, position, direction })
+
     // 检查是否可以创建新面板
     if (!canCreateNewPanel()) return
 
@@ -131,6 +163,7 @@ export const usePanelStore = defineStore('panel', () => {
     if (!targetPanel) return
 
     const parent = findParentPanel(targetPanelId)
+    console.log('[splitPanel] Parent:', parent ? { id: parent.id, direction: parent.direction } : null)
 
     const newPanel: Panel = {
       id: `panel-${Date.now()}`,
@@ -143,6 +176,13 @@ export const usePanelStore = defineStore('panel', () => {
       // 目标面板已经有父级（已经是分屏状态）
       if (!parent.children) return
 
+      // 检查父级的方向是否匹配请求的方向
+      if (parent.direction !== direction) {
+        // 方向不匹配，暂不支持嵌套分栏
+        // TODO: 未来可以实现嵌套分栏
+        return
+      }
+
       const targetIndex = parent.children.findIndex(p => p.id === targetPanelId)
       if (position === 'before') {
         parent.children.splice(targetIndex, 0, newPanel)
@@ -150,8 +190,8 @@ export const usePanelStore = defineStore('panel', () => {
         parent.children.splice(targetIndex + 1, 0, newPanel)
       }
 
-      // 更新 sizes
-      const newSize = 100 / (parent.children.length + 1)
+      // 更新 sizes - 重新平均分配空间
+      const newSize = 100 / parent.children.length
       parent.sizes = parent.children.map(() => newSize)
     } else {
       // 创建新的父级面板
@@ -175,19 +215,50 @@ export const usePanelStore = defineStore('panel', () => {
   function handleDragOver(e: DragEvent, targetPanelId: string, rect: DOMRect) {
     e.preventDefault()
 
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
+    // 获取容器的边界（整个 SplitLayoutContainer）
+    const container = document.querySelector('.split-layout-container')
+    if (!container) return
 
-    if (x < EDGE_THRESHOLD) {
-      dragPreview.value = { visible: true, position: 'left', targetPanelId }
-    } else if (x > rect.width - EDGE_THRESHOLD) {
-      dragPreview.value = { visible: true, position: 'right', targetPanelId }
-    } else if (y < EDGE_THRESHOLD) {
-      dragPreview.value = { visible: true, position: 'top', targetPanelId }
-    } else if (y > rect.height - EDGE_THRESHOLD) {
-      dragPreview.value = { visible: true, position: 'bottom', targetPanelId }
+    const containerRect = container.getBoundingClientRect()
+
+    // 计算目标面板在容器中的相对位置和尺寸
+    const panelLeft = rect.left - containerRect.left
+    const panelTop = rect.top - containerRect.top
+    const panelRight = panelLeft + rect.width
+    const panelBottom = panelTop + rect.height
+
+    // 计算鼠标相对于容器的位置
+    const mouseX = e.clientX - containerRect.left
+    const mouseY = e.clientY - containerRect.top
+
+    // 判断鼠标位置并设置预览
+    let position: 'left' | 'right' | 'top' | 'bottom' | 'center' = 'center'
+
+    if (mouseX < panelLeft + EDGE_THRESHOLD) {
+      position = 'left'
+    } else if (mouseX > panelRight - EDGE_THRESHOLD) {
+      position = 'right'
+    } else if (mouseY < panelTop + EDGE_THRESHOLD) {
+      position = 'top'
+    } else if (mouseY > panelBottom - EDGE_THRESHOLD) {
+      position = 'bottom'
     } else {
-      dragPreview.value = { visible: true, position: 'center', targetPanelId }
+      position = 'center'
+    }
+
+    dragPreview.value = {
+      visible: true,
+      position,
+      targetPanelId,
+      // 存储目标面板的位置信息，用于 CSS 定位
+      panelBounds: {
+        left: panelLeft,
+        top: panelTop,
+        right: panelRight,
+        bottom: panelBottom,
+        width: rect.width,
+        height: rect.height
+      }
     }
   }
 
@@ -212,7 +283,10 @@ export const usePanelStore = defineStore('panel', () => {
     targetPanel.tabs.push(tab)
     targetPanel.activeTabId = tab.id
 
-    // 注意：不在这里调用 closePanel，让调用者决定是否需要关闭
+    // 检查源面板是否为空，如果为空则关闭
+    if (sourcePanel.tabs.length === 0) {
+      closePanel(sourcePanelId)
+    }
   }
 
   function handleDrop(tabId: string, position: string, targetPanelId: string) {
@@ -221,7 +295,7 @@ export const usePanelStore = defineStore('panel', () => {
 
     // 找到标签页所在的源面板
     let sourcePanelId: string | null = null
-    for (const panel of flatPanels.value) {
+    for (const panel of allFlatPanels.value) {
       if (panel.tabs.some(t => t.id === tabId)) {
         sourcePanelId = panel.id
         break
@@ -231,15 +305,16 @@ export const usePanelStore = defineStore('panel', () => {
     if (!sourcePanelId) return
 
     // 获取分割前的面板数量
-    const beforePanelCount = flatPanels.value.length
+    const beforePanelCount = allFlatPanels.value.length
     let newPanelId: string | null = null
 
     switch (position) {
       case 'left':
-        splitPanel(targetPanelId, 'before', 'horizontal')
+        // 向左分栏 = 左右排列 = 垂直分割线
+        splitPanel(targetPanelId, 'before', 'vertical')
         // 找到新创建的面板（分割后面板数量增加）
-        if (flatPanels.value.length > beforePanelCount) {
-          const newPanels = flatPanels.value.filter(p =>
+        if (allFlatPanels.value.length > beforePanelCount) {
+          const newPanels = allFlatPanels.value.filter(p =>
             !p.tabs || p.tabs.length === 0
           )
           newPanelId = newPanels[0]?.id || null
@@ -250,9 +325,10 @@ export const usePanelStore = defineStore('panel', () => {
         break
 
       case 'right':
-        splitPanel(targetPanelId, 'after', 'horizontal')
-        if (flatPanels.value.length > beforePanelCount) {
-          const newPanels = flatPanels.value.filter(p =>
+        // 向右分栏 = 左右排列 = 垂直分割线
+        splitPanel(targetPanelId, 'after', 'vertical')
+        if (allFlatPanels.value.length > beforePanelCount) {
+          const newPanels = allFlatPanels.value.filter(p =>
             !p.tabs || p.tabs.length === 0
           )
           newPanelId = newPanels[0]?.id || null
@@ -263,9 +339,10 @@ export const usePanelStore = defineStore('panel', () => {
         break
 
       case 'top':
-        splitPanel(targetPanelId, 'before', 'vertical')
-        if (flatPanels.value.length > beforePanelCount) {
-          const newPanels = flatPanels.value.filter(p =>
+        // 向上分栏 = 上下排列 = 水平分割线
+        splitPanel(targetPanelId, 'before', 'horizontal')
+        if (allFlatPanels.value.length > beforePanelCount) {
+          const newPanels = allFlatPanels.value.filter(p =>
             !p.tabs || p.tabs.length === 0
           )
           newPanelId = newPanels[0]?.id || null
@@ -276,9 +353,10 @@ export const usePanelStore = defineStore('panel', () => {
         break
 
       case 'bottom':
-        splitPanel(targetPanelId, 'after', 'vertical')
-        if (flatPanels.value.length > beforePanelCount) {
-          const newPanels = flatPanels.value.filter(p =>
+        // 向下分栏 = 上下排列 = 水平分割线
+        splitPanel(targetPanelId, 'after', 'horizontal')
+        if (allFlatPanels.value.length > beforePanelCount) {
+          const newPanels = allFlatPanels.value.filter(p =>
             !p.tabs || p.tabs.length === 0
           )
           newPanelId = newPanels[0]?.id || null
@@ -304,7 +382,6 @@ export const usePanelStore = defineStore('panel', () => {
   }
 
   function closePanel(panelId: string) {
-    // Placeholder for now - will be implemented in Task 12
     const panel = findPanel(panelId)
     const parent = findParentPanel(panelId)
 
@@ -312,6 +389,12 @@ export const usePanelStore = defineStore('panel', () => {
       if (parent && parent.children) {
         // 从父面板中移除
         parent.children = parent.children.filter(p => p.id !== panelId)
+
+        // 更新父面板的 sizes 数组
+        if (parent.sizes && parent.sizes.length > 0) {
+          const newSize = 100 / parent.children.length
+          parent.sizes = parent.children.map(() => newSize)
+        }
 
         // 如果父面板只剩一个子面板，合并
         if (parent.children.length === 1) {
@@ -333,21 +416,39 @@ export const usePanelStore = defineStore('panel', () => {
 
     const onlyChild = parentPanel.children[0]
 
-    // 找到父面板在根列表中的位置
-    const rootIndex = panels.value.findIndex(p => p.id === parentPanel.id)
+    // 找到父面板的父面板（祖父面板）
+    const grandParent = findParentPanel(parentPanel.id)
 
-    if (rootIndex !== -1) {
-      // 移除父面板
-      panels.value.splice(rootIndex, 1)
+    if (grandParent && grandParent.children) {
+      // 父面板在另一个面板的 children 中
+      const parentIndex = grandParent.children.findIndex(p => p.id === parentPanel.id)
+      if (parentIndex !== -1) {
+        // 替换父面板为唯一的子面板
+        grandParent.children.splice(parentIndex, 1, onlyChild)
 
-      // 添加子面板到根列表
-      panels.value.push(onlyChild)
+        // 更新 sizes 数组（移除父面板对应的 size，重新分配）
+        if (grandParent.sizes) {
+          const newSize = 100 / grandParent.children.length
+          grandParent.sizes = grandParent.children.map(() => newSize)
+        }
+      }
+    } else {
+      // 父面板在根列表中
+      const rootIndex = panels.value.findIndex(p => p.id === parentPanel.id)
+      if (rootIndex !== -1) {
+        // 移除父面板
+        panels.value.splice(rootIndex, 1)
+
+        // 添加子面板到根列表
+        panels.value.push(onlyChild)
+      }
     }
   }
 
   return {
     panels,
     dragPreview,
+    isDraggingGlobal,
     flatPanels,
     findPanel,
     findParentPanel,

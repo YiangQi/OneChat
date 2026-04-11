@@ -2,6 +2,7 @@
   <div
     class="drag-preview"
     :class="[previewClass, { 'drag-preview--visible': panelStore.dragPreview.visible }]"
+    :style="previewStyle"
   ></div>
 </template>
 
@@ -16,6 +17,53 @@ const previewClass = computed(() => {
   if (!position) return ''
   return `preview-${position}`
 })
+
+const previewStyle = computed(() => {
+  const bounds = panelStore.dragPreview.panelBounds
+  if (!bounds || !panelStore.dragPreview.visible) return {}
+
+  const position = panelStore.dragPreview.position
+
+  switch (position) {
+    case 'left':
+      return {
+        left: '0',
+        top: `${bounds.top}px`,
+        bottom: `${100 - bounds.bottom}%`,
+        width: `${bounds.left + bounds.width / 2}px`
+      }
+    case 'right':
+      return {
+        left: `${bounds.left + bounds.width / 2}px`,
+        top: `${bounds.top}px`,
+        right: '0',
+        bottom: `${100 - bounds.bottom}%`
+      }
+    case 'top':
+      return {
+        left: `${bounds.left}px`,
+        top: '0',
+        right: `${100 - bounds.right}%`,
+        height: `${bounds.top + bounds.height / 2}px`
+      }
+    case 'bottom':
+      return {
+        left: `${bounds.left}px`,
+        top: `${bounds.top + bounds.height / 2}px`,
+        right: `${100 - bounds.right}%`,
+        bottom: '0'
+      }
+    case 'center':
+      return {
+        left: `${bounds.left}px`,
+        top: `${bounds.top}px`,
+        width: `${bounds.width}px`,
+        height: `${bounds.height}px`
+      }
+    default:
+      return {}
+  }
+})
 </script>
 
 <style scoped>
@@ -25,7 +73,7 @@ const previewClass = computed(() => {
   border: 2px dashed #3b82f6;
   pointer-events: none;
   z-index: 1000;
-  transition: all 0.15s ease-out;
+  transition: all 0.1s ease-out;
   /* Hidden by default */
   display: none;
 }
@@ -34,43 +82,8 @@ const previewClass = computed(() => {
   display: block;
 }
 
-.preview-left {
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 50%;
-}
-
-.preview-right {
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 50%;
-}
-
-.preview-top {
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 50%;
-}
-
-.preview-bottom {
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 50%;
-}
-
 .preview-center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 200px;
-  height: 100px;
   background: rgba(59, 130, 246, 0.3);
-  border: 2px dashed #3b82f6;
   border-radius: 8px;
 }
 </style>

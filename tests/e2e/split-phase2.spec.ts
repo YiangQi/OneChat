@@ -34,27 +34,25 @@ test.describe('第二阶段：拖拽功能', () => {
     const initialPanels = await mainWindow.locator('.tab-group').count()
 
     // Simulate drag to right edge using store API
-    const createdSplit = await mainWindow.evaluate(() => {
+    await mainWindow.evaluate(() => {
       // @ts-ignore - Accessing store for testing
       const { panelStore, tabsStore } = window.$stores || {}
-      if (!panelStore || !tabsStore) return false
+      if (!panelStore || !tabsStore) return
 
       // Get the first tab
       const tabs = tabsStore.tabs
-      if (tabs.length === 0) return false
+      if (tabs.length === 0) return
 
       const tabId = tabs[0].id
 
       // Simulate drop to right
       panelStore.handleDrop(tabId, 'right', 'panel-default')
-
-      // Check if split was created
-      return panelStore.flatPanels.length >= 2
     })
 
-    expect(createdSplit).toBe(true)
+    // Wait for DOM to update
+    await mainWindow.waitForTimeout(100)
 
-    // Verify panel count increased
+    // Verify panel count increased by checking DOM
     const finalPanels = await mainWindow.locator('.tab-group').count()
     expect(finalPanels).toBeGreaterThan(initialPanels)
   })
@@ -65,26 +63,31 @@ test.describe('第二阶段：拖拽功能', () => {
     await firstAIItem.click()
     await mainWindow.waitForTimeout(500)
 
+    // Get initial panel count
+    const initialPanels = await mainWindow.locator('.tab-group').count()
+
     // Simulate drag to left edge using store API
-    const createdSplit = await mainWindow.evaluate(() => {
+    await mainWindow.evaluate(() => {
       // @ts-ignore - Accessing store for testing
       const { panelStore, tabsStore } = window.$stores || {}
-      if (!panelStore || !tabsStore) return false
+      if (!panelStore || !tabsStore) return
 
       // Get the first tab
       const tabs = tabsStore.tabs
-      if (tabs.length === 0) return false
+      if (tabs.length === 0) return
 
       const tabId = tabs[0].id
 
       // Simulate drop to left
       panelStore.handleDrop(tabId, 'left', 'panel-default')
-
-      // Check if split was created
-      return panelStore.flatPanels.length >= 2
     })
 
-    expect(createdSplit).toBe(true)
+    // Wait for DOM to update
+    await mainWindow.waitForTimeout(100)
+
+    // Verify panel count increased by checking DOM
+    const finalPanels = await mainWindow.locator('.tab-group').count()
+    expect(finalPanels).toBeGreaterThan(initialPanels)
   })
 
   test('通过 store API 测试：拖拽标签页到另一个面板应该合并', async () => {
