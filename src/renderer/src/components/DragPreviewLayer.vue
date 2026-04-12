@@ -1,9 +1,19 @@
 <template>
   <div
     class="drag-preview"
-    :class="[previewClass, { 'drag-preview--visible': panelStore.dragPreview.visible }]"
+    :class="[previewClass, {
+      'drag-preview--visible': panelStore.dragPreview.visible,
+      'drag-preview--blocked': panelStore.dragPreview.blocked
+    }]"
     :style="previewStyle"
-  ></div>
+  >
+    <span
+      v-if="panelStore.dragPreview.blocked && panelStore.dragPreview.message"
+      class="drag-preview-message"
+    >
+      {{ panelStore.dragPreview.message }}
+    </span>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -82,5 +92,24 @@ const previewStyle = computed(() => {
 .preview-center {
   background: rgba(59, 130, 246, 0.28);
   border-radius: 8px;
+}
+
+.drag-preview--blocked {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(239, 68, 68, 0.14);
+  border-color: #ef4444;
+  border-style: solid;
+}
+
+.drag-preview-message {
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.85);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
 }
 </style>

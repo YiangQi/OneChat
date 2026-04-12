@@ -1,15 +1,16 @@
 <template>
   <div
-    v-show="visible"
+    v-show="layout.visible"
     class="webview-container"
     :class="{ 'is-dragging': panelStore.isDraggingGlobal || panelStore.isResizingSplitters }"
+    :style="containerStyle"
   >
     <webview
       v-if="hasLoaded"
       :src="model.url"
       :partition="`persist:${model.id}`"
       class="webview"
-      :data-tab-id="model.id"
+      :data-tab-id="tabId"
       @dom-ready="handleDomReady"
       @did-finish-load="handleFinishLoad"
       @did-fail-load="handleFailLoad"
@@ -18,25 +19,38 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onUnmounted } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import type { AIModel } from '@shared/types'
 import { usePanelStore } from '@/stores/panel'
 
 const props = defineProps<{
+  tabId: string
   model: AIModel
-  visible?: boolean
+  layout: {
+    visible: boolean
+    left: number
+    top: number
+    width: number
+    height: number
+  }
 }>()
 
 const panelStore = usePanelStore()
 const hasLoaded = ref(false)
 const isDestroyed = ref(false)
 
-// 当 visible 变为 true 时，才加载 webview
-watch(() => props.visible, (newVal) => {
+const containerStyle = computed(() => ({
+  left: `${props.layout.left}px`,
+  top: `${props.layout.top}px`,
+  width: `${props.layout.width}px`,
+  height: `${props.layout.height}px`
+}))
+
+// Create each webview once, then only move/resize the wrapper to avoid reloads.
+watch(() => props.layout.visible, (newVal) => {
   if (isDestroyed.value) return
 
   if (newVal && !hasLoaded.value) {
-    // 延迟加载，避免同时加载多个 webview
     setTimeout(() => {
       if (!isDestroyed.value) {
         hasLoaded.value = true
@@ -65,14 +79,11 @@ function handleFailLoad(event: any) {
 <style scoped>
 .webview-container {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  overflow: hidden;
+  pointer-events: auto;
 }
 
-/* 拖拽时禁用 webview 的鼠标事件，让拖拽可以穿透 */
-.webview-container.is-dragging .webview {
+.webview-container.is-dragging {
   pointer-events: none;
 }
 

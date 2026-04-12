@@ -9,6 +9,7 @@
         <PanelRenderer :panel="panel" />
       </template>
     </div>
+    <WebViewLayer />
     <DragPreviewLayer />
   </div>
 </template>
@@ -18,6 +19,7 @@ import { ref } from 'vue'
 import { usePanelStore } from '@/stores/panel'
 import PanelRenderer from './PanelRenderer.vue'
 import DragPreviewLayer from './DragPreviewLayer.vue'
+import WebViewLayer from './WebViewLayer.vue'
 
 const panelStore = usePanelStore()
 const isDragOverContainer = ref(false)

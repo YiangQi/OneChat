@@ -67,6 +67,7 @@ test.describe('Split Layout Phase 1 - basic split behavior', () => {
   })
 
   test('renders the split layout container', async () => {
+    await waitForStores(mainWindow)
     await expect(mainWindow.locator('.split-layout-container')).toBeVisible()
     await expect(mainWindow.locator('.splitpanes-root')).toBeVisible()
   })

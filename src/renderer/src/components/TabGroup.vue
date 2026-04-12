@@ -26,14 +26,10 @@
       </div>
     </div>
 
-    <div class="tab-content">
-      <WebViewContainer
-        v-for="tab in tabs"
-        :key="tab.id"
-        :model="tab.model"
-        :visible="tab.id === panel.activeTabId"
-      />
-    </div>
+    <div
+      class="tab-content"
+      :data-panel-content-id="panel.id"
+    ></div>
   </div>
 </template>
 
@@ -44,7 +40,6 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { usePanelStore } from '@/stores/panel'
 import type { Panel } from '@/stores/panel'
 import type { Tab } from '@/stores/tabs'
-import WebViewContainer from './WebViewContainer.vue'
 
 interface Props {
   panel: Panel

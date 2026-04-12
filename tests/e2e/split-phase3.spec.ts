@@ -150,6 +150,34 @@ test.describe('Split Layout Phase 3 - advanced behavior', () => {
     })
 
     expect(recoveredBounds?.unusedRightSpace).toBeLessThan(2)
+
+    await expect.poll(async () => {
+      return mainWindow.evaluate(() => {
+        const visibleWebviews = [...document.querySelectorAll('.webview-container')]
+          .filter(element => {
+            const rect = element.getBoundingClientRect()
+            return rect.width > 0 && rect.height > 0
+          })
+        if (visibleWebviews.length === 0) return false
+
+        return visibleWebviews.every(visibleWebview => {
+          const tabId = visibleWebview.querySelector('.webview')?.getAttribute('data-tab-id')
+          const tab = [...document.querySelectorAll('.tab')]
+            .find(element => element.getAttribute('data-testid') === `tab-${tabId}`)
+          const content = tab?.closest('.tab-group')?.querySelector('.tab-content')
+
+          if (!content) return false
+
+          const webviewRect = visibleWebview.getBoundingClientRect()
+          const contentRect = content.getBoundingClientRect()
+
+          return Math.abs(webviewRect.width - contentRect.width) < 2 &&
+            Math.abs(webviewRect.height - contentRect.height) < 2 &&
+            Math.abs(webviewRect.left - contentRect.left) < 2 &&
+            Math.abs(webviewRect.top - contentRect.top) < 2
+        })
+      })
+    }).toBe(true)
   })
 
   test('panel count does not exceed the maximum limit', async () => {

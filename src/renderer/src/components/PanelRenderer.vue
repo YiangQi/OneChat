@@ -1,5 +1,6 @@
 <template>
   <splitpanes
+    ref="splitpanesRef"
     v-if="panel.direction"
     :horizontal="panel.direction === 'horizontal'"
     class="custom-splitpanes"
@@ -10,7 +11,7 @@
     <pane
       v-for="(child, index) in panel.children"
       :key="child.id"
-      :min-size="20"
+      :min-size="minPaneSize"
       :size="paneSizes[index]"
     >
       <PanelRenderer
@@ -30,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Splitpanes, Pane } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
 import TabGroup from './TabGroup.vue'
@@ -43,11 +44,31 @@ interface Props {
 
 const props = defineProps<Props>()
 const panelStore = usePanelStore()
+const splitpanesRef = ref<InstanceType<typeof Splitpanes> | null>(null)
+const splitpanesSize = ref({ width: 0, height: 0 })
+let resizeObserver: ResizeObserver | null = null
+
+const MIN_PANEL_WIDTH = 280
+const MIN_PANEL_HEIGHT = 220
 
 const paneSizes = computed(() => normalizePaneSizes(
   props.panel.sizes,
   props.panel.children?.length ?? 0
 ))
+
+const minPaneSize = computed(() => {
+  const paneCount = props.panel.children?.length ?? 1
+  const size = props.panel.direction === 'horizontal'
+    ? splitpanesSize.value.height
+    : splitpanesSize.value.width
+  const minPixels = props.panel.direction === 'horizontal'
+    ? MIN_PANEL_HEIGHT
+    : MIN_PANEL_WIDTH
+
+  if (size <= 0) return 10
+
+  return Math.min(100 / paneCount, (minPixels / size) * 100)
+})
 
 defineOptions({
   name: 'PanelRenderer'
@@ -103,11 +124,34 @@ function stopResizeTracking() {
 onMounted(() => {
   window.addEventListener('mouseup', stopResizeTracking)
   window.addEventListener('blur', stopResizeTracking)
+
+  const element = splitpanesRef.value?.$el as HTMLElement | undefined
+  if (element) {
+    const rect = element.getBoundingClientRect()
+    splitpanesSize.value = {
+      width: rect.width,
+      height: rect.height
+    }
+  }
+
+  if (element && typeof ResizeObserver !== 'undefined') {
+    resizeObserver = new ResizeObserver(entries => {
+      const rect = entries[0]?.contentRect
+      if (!rect) return
+
+      splitpanesSize.value = {
+        width: rect.width,
+        height: rect.height
+      }
+    })
+    resizeObserver.observe(element)
+  }
 })
 
 onUnmounted(() => {
   window.removeEventListener('mouseup', stopResizeTracking)
   window.removeEventListener('blur', stopResizeTracking)
+  resizeObserver?.disconnect()
 })
 </script>
 

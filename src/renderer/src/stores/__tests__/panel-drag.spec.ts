@@ -43,6 +43,21 @@ describe('PanelStore - 拖拽边缘检测', () => {
       expect(panelStore.dragPreview.position).toBe('right')
     })
 
+    it('目标面板太小时应该显示不可分屏提示', () => {
+      const mockRect = { left: 0, top: 0, width: 500, height: 800, right: 500, bottom: 800, x: 0, y: 0, toJSON: () => ({}) }
+      const mockEvent = {
+        clientX: 490,
+        clientY: 400,
+        preventDefault: vi.fn()
+      } as unknown as DragEvent
+
+      panelStore.handleDragOver(mockEvent, 'panel-1', mockRect)
+
+      expect(panelStore.dragPreview.position).toBe('right')
+      expect(panelStore.dragPreview.blocked).toBe(true)
+      expect(panelStore.dragPreview.message).toBe('空间太小，无法继续分屏')
+    })
+
     it('鼠标在上边缘应该设置 position 为 top', () => {
       const mockRect = { left: 0, top: 0, width: 1000, height: 800, right: 1000, bottom: 800, x: 0, y: 0, toJSON: () => ({}) }
       const mockEvent = {
@@ -188,5 +203,29 @@ describe('PanelStore - 拖放操作', () => {
 
     expect(panelStore.dragPreview.visible).toBe(false)
     expect(panelStore.dragPreview.position).toBeNull()
+  })
+
+  it('目标面板低于最小尺寸时不应该继续分屏', () => {
+    const panelStore = usePanelStore()
+
+    expect(panelStore.canSplitWithinBounds('right', {
+      width: 500,
+      height: 800
+    })).toBe(false)
+
+    expect(panelStore.canSplitWithinBounds('right', {
+      width: 600,
+      height: 800
+    })).toBe(true)
+
+    expect(panelStore.canSplitWithinBounds('bottom', {
+      width: 800,
+      height: 400
+    })).toBe(false)
+
+    expect(panelStore.canSplitWithinBounds('bottom', {
+      width: 800,
+      height: 500
+    })).toBe(true)
   })
 })

@@ -3,8 +3,9 @@ import { computed, ref, watch } from 'vue'
 import type { Tab } from './tabs'
 import { useTabsStore } from './tabs'
 
-const MAX_PANELS = 6
-const EDGE_THRESHOLD = 50
+const MAX_PANELS = 10
+const MIN_PANEL_WIDTH = 280
+const MIN_PANEL_HEIGHT = 220
 
 export interface Panel {
   id: string
@@ -21,6 +22,8 @@ export interface DragPreview {
   visible: boolean
   position: 'left' | 'right' | 'top' | 'bottom' | 'center' | null
   targetPanelId: string | null
+  blocked?: boolean
+  message?: string
   panelBounds?: {
     left: number
     top: number
@@ -190,6 +193,20 @@ export const usePanelStore = defineStore('panel', () => {
 
   function createPanelId(prefix = 'panel'): string {
     return `${prefix}-${Date.now()}-${nextPanelSequence++}`
+  }
+
+  function canSplitWithinBounds(position: string, bounds?: { width: number, height: number }): boolean {
+    if (!bounds) return true
+
+    if (position === 'left' || position === 'right') {
+      return bounds.width / 2 >= MIN_PANEL_WIDTH
+    }
+
+    if (position === 'top' || position === 'bottom') {
+      return bounds.height / 2 >= MIN_PANEL_HEIGHT
+    }
+
+    return true
   }
 
   function getInsertionTargetPanel(): Panel | undefined {
@@ -384,20 +401,27 @@ export const usePanelStore = defineStore('panel', () => {
 
     let position: DragPreview['position'] = 'center'
 
-    if (x < EDGE_THRESHOLD) {
+    if (x < rect.width / 3) {
       position = 'left'
-    } else if (x > rect.width - EDGE_THRESHOLD) {
+    } else if (x > rect.width - rect.width / 3) {
       position = 'right'
-    } else if (y < EDGE_THRESHOLD) {
+    } else if (y < rect.height / 3) {
       position = 'top'
-    } else if (y > rect.height - EDGE_THRESHOLD) {
+    } else if (y > rect.height - rect.height / 3) {
       position = 'bottom'
     }
+
+    const blocked = !canSplitWithinBounds(position ?? 'center', {
+      width: rect.width,
+      height: rect.height
+    })
 
     dragPreview.value = {
       visible: true,
       position,
       targetPanelId,
+      blocked,
+      message: blocked ? '空间太小，无法继续分屏' : undefined,
       panelBounds: {
         left: rect.left - containerRect.left,
         top: rect.top - containerRect.top,
@@ -413,6 +437,17 @@ export const usePanelStore = defineStore('panel', () => {
     const targetPanel = findPanel(targetPanelId)
     const sourcePanel = findPanelContainingTab(tabId)
     if (!targetPanel || !sourcePanel) return
+    if (!canSplitWithinBounds(position, dragPreview.value.panelBounds)) {
+      dragPreview.value = {
+        visible: false,
+        position: null,
+        targetPanelId: null,
+        blocked: false,
+        message: undefined
+      }
+      isDraggingGlobal.value = false
+      return
+    }
 
     switch (position) {
       case 'left': {
@@ -447,7 +482,9 @@ export const usePanelStore = defineStore('panel', () => {
     dragPreview.value = {
       visible: false,
       position: null,
-      targetPanelId: null
+      targetPanelId: null,
+      blocked: false,
+      message: undefined
     }
     isDraggingGlobal.value = false
   }
@@ -527,6 +564,7 @@ export const usePanelStore = defineStore('panel', () => {
     updatePanelSizes,
     setSplitterResizing,
     canCreateNewPanel,
+    canSplitWithinBounds,
     handleDragOver,
     moveTabToPanel,
     handleDrop,
