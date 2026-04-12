@@ -7,6 +7,7 @@ import App from './App.vue'
 import './styles/main.css'
 import { useTabsStore } from './stores/tabs'
 import { usePanelStore } from './stores/panel'
+import { useComposerStore } from './stores/composer'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -20,6 +21,7 @@ app.mount('#app')
 // @ts-ignore - Expose store instances for testing
 window.$stores = {
   get tabsStore() { return useTabsStore() },
-  get panelStore() { return usePanelStore() }
+  get panelStore() { return usePanelStore() },
+  get composerStore() { return useComposerStore() }
 }
 console.log('[E2E] Stores exposed to window.$stores')

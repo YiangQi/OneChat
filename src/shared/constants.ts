@@ -10,6 +10,10 @@ export const IPC_CHANNELS = {
   WINDOW_MOVE_TAB: 'window:move-tab-between-windows',
   WINDOW_GET_ALL: 'window:get-all-windows',
 
+  // 文件选择对话框
+  DIALOG_OPEN_IMAGE: 'dialog:open-image',
+  DIALOG_OPEN_FILE: 'dialog:open-file',
+
   // 主进程 → 渲染进程
   THEME_SYSTEM_CHANGED: 'theme:system-changed',
   WINDOW_TAB_DROPPED: 'window:tab-dropped'

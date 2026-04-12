@@ -60,7 +60,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * Gets all independent windows
    * @returns Promise<Array> Array of window info objects
    */
-  getAllWindows: () => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_GET_ALL)
+  getAllWindows: () => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_GET_ALL),
+
+  /**
+   * Opens a file dialog to select an image file
+   * @returns Promise<{ data: string; name: string; type: string } | null> File data as base64, name, and MIME type, or null if cancelled
+   */
+  openImageDialog: () => ipcRenderer.invoke(IPC_CHANNELS.DIALOG_OPEN_IMAGE),
+
+  /**
+   * Opens a file dialog to select any file
+   * @returns Promise<{ data: string; name: string; type: string } | null> File data as base64, name, and MIME type, or null if cancelled
+   */
+  openFileDialog: () => ipcRenderer.invoke(IPC_CHANNELS.DIALOG_OPEN_FILE)
 })
 
 /**
@@ -77,6 +89,8 @@ declare global {
       onTabDropped: (callback: (data: any) => void) => void
       mergeToMainWindow: (tabData: any, sourceWindowId: number) => Promise<boolean>
       getAllWindows: () => Promise<Array<{ id: number; hasTab: boolean }>>
+      openImageDialog: () => Promise<{ data: string; name: string; type: string } | null>
+      openFileDialog: () => Promise<{ data: string; name: string; type: string } | null>
     }
   }
 }

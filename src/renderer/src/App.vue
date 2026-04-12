@@ -2,8 +2,10 @@
   <div class="app-container" :class="themeClass">
     <ActivityBar :items="menuItems" :active-id="activeModule" @select="activeModule = $event" />
     <Sidebar :active-module="activeModule" />
-    <SplitLayoutContainer />
-    <SettingsButton />
+    <div class="main-content-wrapper">
+      <SplitLayoutContainer />
+      <BottomComposer />
+    </div>
     <SettingsDialog v-model="settingsVisible" />
   </div>
 </template>
@@ -15,6 +17,7 @@ import { useThemeStore } from '@/stores/theme'
 import ActivityBar from '@/components/ActivityBar.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import SplitLayoutContainer from '@/components/SplitLayoutContainer.vue'
+import BottomComposer from '@/components/BottomComposer.vue'
 import SettingsButton from '@/components/SettingsButton.vue'
 import SettingsDialog from '@/components/SettingsDialog.vue'
 
@@ -46,5 +49,13 @@ onMounted(() => {
   display: flex;
   height: 100vh;
   overflow: hidden;
+}
+
+.main-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
 }
 </style>

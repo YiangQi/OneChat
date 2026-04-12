@@ -126,7 +126,22 @@ function onSidebarVisibleChanged(visible) {
  * The function need to be ignored if someone has logined.
  */
 function onLoginButtonClicked() {
-    // TODO
+    // Claude doesn't have a traditional login button in the UI
+    // Users are redirected to auth.anthropic.com if not logged in
+    // Check if there's a login button or link and click it
+    const loginButton = document.querySelector('a[href*="auth.anthropic.com"]') as HTMLAnchorElement;
+    if (loginButton) {
+        loginButton.click();
+    }
+}
+
+/**
+ * When the client-side new conversation button is clicked, this event will be triggered.
+ * Start a new conversation by navigating to the main Claude URL.
+ */
+function onChatNewButtonClicked() {
+    // Navigate to the base URL to start a new conversation
+    window.location.href = window.location.origin;
 }
 
 /**

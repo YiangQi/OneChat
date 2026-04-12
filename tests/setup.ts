@@ -8,7 +8,12 @@ global.window.electronAPI = {
   closeAllWindows: vi.fn(() => Promise.resolve({ success: true })),
   getSystemTheme: vi.fn(() => Promise.resolve('dark')),
   onThemeSystemChanged: vi.fn(() => () => {}),
-  onInitTab: vi.fn(() => () => {})
+  onInitTab: vi.fn(() => () => {}),
+  onTabDropped: vi.fn(() => () => {}),
+  mergeToMainWindow: vi.fn(() => Promise.resolve(true)),
+  getAllWindows: vi.fn(() => Promise.resolve([])),
+  openImageDialog: vi.fn(() => Promise.resolve(null)),
+  openFileDialog: vi.fn(() => Promise.resolve(null))
 }
 
 // Global stub for Element Plus components
@@ -28,5 +33,8 @@ config.global.stubs = {
   'el-radio': {
     template: '<div class="el-radio"><slot /></div>',
     props: ['label', 'modelValue']
+  },
+  'el-icon': {
+    template: '<span class="el-icon"><slot /></span>'
   }
 }

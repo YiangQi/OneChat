@@ -28,20 +28,14 @@ const aiModelsStore = useAIModelsStore()
 const tabsStore = useTabsStore()
 
 onMounted(async () => {
-  console.log('[AIList] Component mounted, loading models...')
-  console.log('[AIList] window.electronAPI:', window.electronAPI)
-
   try {
     await aiModelsStore.loadModels()
-    console.log('[AIList] Models loaded:', aiModelsStore.models.length)
-    console.log('[AIList] Models:', aiModelsStore.models)
   } catch (error) {
     console.error('[AIList] Failed to load models:', error)
   }
 })
 
 function handleClick(model: AIModel) {
-  console.log('[AIList] Clicked model:', model.name)
   tabsStore.openTab(model)
 }
 

@@ -1,9 +1,10 @@
-import { app, ipcMain, protocol, nativeTheme } from 'electron'
+import { app, ipcMain, protocol, nativeTheme, dialog, BrowserWindow } from 'electron'
 import { createMainWindow, closeAllWindows, createIndependentWindow, registerWindowIpcHandlers } from './window'
 import { readOnlineConfig } from './config'
 import { IPC_CHANNELS } from '../shared/constants'
 import { join } from 'path'
 import { readFile } from 'fs/promises'
+import { extname } from 'path'
 
 let mainWindow: ReturnType<typeof createMainWindow> | null = null
 
@@ -83,6 +84,105 @@ function registerIpcHandlers() {
   ipcMain.handle(IPC_CHANNELS.THEME_GET_SYSTEM, () => {
     // 返回实际的系统主题：'light' 或 'dark'
     return nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
+  })
+
+  // Handler for opening image file dialog
+  ipcMain.handle(IPC_CHANNELS.DIALOG_OPEN_IMAGE, async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return null
+
+    const result = await dialog.showOpenDialog(win, {
+      title: 'Select Image',
+      filters: [
+        { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'] }
+      ],
+      properties: ['openFile']
+    })
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return null
+    }
+
+    try {
+      const filePath = result.filePaths[0]
+      const data = await readFile(filePath)
+      const base64 = data.toString('base64')
+      const ext = extname(filePath).toLowerCase()
+
+      // Map extension to MIME type
+      const mimeTypes: Record<string, string> = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.svg': 'image/svg+xml'
+      }
+
+      return {
+        data: base64,
+        name: filePath.split(/[/\\]/).pop() || 'image',
+        type: mimeTypes[ext] || 'image/png'
+      }
+    } catch (error) {
+      console.error('Error reading image file:', error)
+      return null
+    }
+  })
+
+  // Handler for opening any file dialog
+  ipcMain.handle(IPC_CHANNELS.DIALOG_OPEN_FILE, async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return null
+
+    const result = await dialog.showOpenDialog(win, {
+      title: 'Select File',
+      properties: ['openFile']
+    })
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return null
+    }
+
+    try {
+      const filePath = result.filePaths[0]
+      const data = await readFile(filePath)
+      const base64 = data.toString('base64')
+      const ext = extname(filePath).toLowerCase()
+
+      // Basic MIME type mapping
+      const mimeTypes: Record<string, string> = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.svg': 'image/svg+xml',
+        '.pdf': 'application/pdf',
+        '.txt': 'text/plain',
+        '.json': 'application/json',
+        '.js': 'text/javascript',
+        '.ts': 'text/typescript',
+        '.html': 'text/html',
+        '.css': 'text/css',
+        '.md': 'text/markdown',
+        '.xml': 'application/xml',
+        '.zip': 'application/zip',
+        '.doc': 'application/msword',
+        '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        '.xls': 'application/vnd.ms-excel',
+        '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      }
+
+      return {
+        data: base64,
+        name: filePath.split(/[/\\]/).pop() || 'file',
+        type: mimeTypes[ext] || 'application/octet-stream'
+      }
+    } catch (error) {
+      console.error('Error reading file:', error)
+      return null
+    }
   })
 
   // 注册窗口管理 IPC handlers
