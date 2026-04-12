@@ -1,163 +1,92 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { launchElectronApp, getMainWindow } from './helpers/electron'
 
-/**
- * Split Layout Phase 2 E2E Tests
- *
- * Tests drag and drop functionality for split panels
- */
-test.describe('第二阶段：拖拽功能', () => {
+async function waitForStores(page: Page) {
+  await page.waitForFunction(() => {
+    // @ts-ignore
+    return Boolean(window.$stores?.panelStore && window.$stores?.tabsStore)
+  }, { timeout: 5000 })
+}
+
+async function openTabs(page: Page, count: number) {
+  await waitForStores(page)
+  await page.waitForTimeout(1000)
+
+  for (let i = 0; i < count; i++) {
+    await page.locator('.ai-item').nth(i).click()
+    await page.waitForTimeout(300)
+  }
+}
+
+async function dropTab(page: Page, tabIndex: number, position: 'left' | 'right' | 'top' | 'bottom' | 'center', targetPanelId = 'panel-default') {
+  await page.evaluate(({ tabIndex, position, targetPanelId }) => {
+    // @ts-ignore
+    const { panelStore, tabsStore } = window.$stores || {}
+    if (!panelStore || !tabsStore) return
+
+    const tab = tabsStore.tabs[tabIndex]
+    if (!tab) return
+
+    panelStore.handleDrop(tab.id, position, targetPanelId)
+  }, { tabIndex, position, targetPanelId })
+}
+
+test.describe('Split Layout Phase 2 - drag and drop', () => {
   let electronApp: Awaited<ReturnType<typeof launchElectronApp>>
   let mainWindow: Awaited<ReturnType<typeof getMainWindow>>
 
-  test.beforeAll(async () => {
+  test.beforeEach(async () => {
     electronApp = await launchElectronApp()
     mainWindow = await getMainWindow(electronApp)
   })
 
-  test.afterAll(async () => {
+  test.afterEach(async () => {
     await electronApp.close()
   })
 
-  test.beforeEach(async () => {
-    // Wait for models to load
-    await mainWindow.waitForTimeout(2000)
-  })
-
-  test('通过 store API 测试：拖拽标签页到右边应该创建右侧分屏', async () => {
-    // Open a tab first
-    const firstAIItem = mainWindow.locator('.ai-item').first()
-    await firstAIItem.click()
-    await mainWindow.waitForTimeout(500)
-
-    // Get initial panel count
+  test('dragging a tab to the right creates a right split when the source keeps another tab', async () => {
+    await openTabs(mainWindow, 2)
     const initialPanels = await mainWindow.locator('.tab-group').count()
 
-    // Simulate drag to right edge using store API
-    await mainWindow.evaluate(() => {
-      // @ts-ignore - Accessing store for testing
-      const { panelStore, tabsStore } = window.$stores || {}
-      if (!panelStore || !tabsStore) return
-
-      // Get the first tab
-      const tabs = tabsStore.tabs
-      if (tabs.length === 0) return
-
-      const tabId = tabs[0].id
-
-      // Simulate drop to right
-      panelStore.handleDrop(tabId, 'right', 'panel-default')
-    })
-
-    // Wait for DOM to update
-    await mainWindow.waitForTimeout(100)
-
-    // Verify panel count increased by checking DOM
-    const finalPanels = await mainWindow.locator('.tab-group').count()
-    expect(finalPanels).toBeGreaterThan(initialPanels)
+    await dropTab(mainWindow, 0, 'right')
+    await expect.poll(() => mainWindow.locator('.tab-group').count()).toBeGreaterThan(initialPanels)
   })
 
-  test('通过 store API 测试：拖拽标签页到左边应该创建左侧分屏', async () => {
-    // Open a tab first
-    const firstAIItem = mainWindow.locator('.ai-item').first()
-    await firstAIItem.click()
-    await mainWindow.waitForTimeout(500)
-
-    // Get initial panel count
+  test('dragging a tab to the left creates a left split when the source keeps another tab', async () => {
+    await openTabs(mainWindow, 2)
     const initialPanels = await mainWindow.locator('.tab-group').count()
 
-    // Simulate drag to left edge using store API
-    await mainWindow.evaluate(() => {
-      // @ts-ignore - Accessing store for testing
-      const { panelStore, tabsStore } = window.$stores || {}
-      if (!panelStore || !tabsStore) return
-
-      // Get the first tab
-      const tabs = tabsStore.tabs
-      if (tabs.length === 0) return
-
-      const tabId = tabs[0].id
-
-      // Simulate drop to left
-      panelStore.handleDrop(tabId, 'left', 'panel-default')
-    })
-
-    // Wait for DOM to update
-    await mainWindow.waitForTimeout(100)
-
-    // Verify panel count increased by checking DOM
-    const finalPanels = await mainWindow.locator('.tab-group').count()
-    expect(finalPanels).toBeGreaterThan(initialPanels)
+    await dropTab(mainWindow, 0, 'left')
+    await expect.poll(() => mainWindow.locator('.tab-group').count()).toBeGreaterThan(initialPanels)
   })
 
-  test('通过 store API 测试：拖拽标签页到另一个面板应该合并', async () => {
-    // Open two tabs
-    const firstAIItem = mainWindow.locator('.ai-item').nth(0)
-    const secondAIItem = mainWindow.locator('.ai-item').nth(1)
+  test('dragging a tab to another panel can merge it into that panel', async () => {
+    await openTabs(mainWindow, 2)
+    await dropTab(mainWindow, 0, 'right')
+    await expect.poll(() => mainWindow.locator('.tab-group').count()).toBeGreaterThanOrEqual(2)
 
-    await firstAIItem.click()
-    await mainWindow.waitForTimeout(500)
-    await secondAIItem.click()
-    await mainWindow.waitForTimeout(500)
-
-    // Create split first
-    await mainWindow.evaluate(() => {
-      // @ts-ignore
-      const { panelStore, tabsStore } = window.$stores || {}
-      if (!panelStore || !tabsStore) return
-
-      const tabs = tabsStore.tabs
-      if (tabs.length >= 1) {
-        panelStore.handleDrop(tabs[0].id, 'right', 'panel-default')
-      }
-    })
-
-    // Check we have 2 panels
-    const panelsAfterSplit = await mainWindow.locator('.tab-group').count()
-    expect(panelsAfterSplit).toBeGreaterThanOrEqual(2)
-
-    // Try to move tab between panels (center drop = merge attempt)
     const moveAttempted = await mainWindow.evaluate(() => {
       // @ts-ignore
-      const { panelStore, tabsStore } = window.$stores || {}
-      if (!panelStore || !tabsStore) return false
+      const { panelStore } = window.$stores || {}
+      if (!panelStore) return false
 
-      const tabs = tabsStore.tabs
       const panels = panelStore.flatPanels
+      if (panels.length < 2 || panels[1].tabs.length === 0) return false
 
-      if (panels.length >= 2 && tabs.length >= 1) {
-        // Move tab to first panel (center drop = merge)
-        const sourcePanelId = panels[1].id
-        const targetPanelId = panels[0].id
-        // Use the first available tab
-        const tabId = tabs[0].id
-        panelStore.moveTabToPanel(tabId, sourcePanelId, targetPanelId)
-        return true
-      }
-
-      return false
+      const tabId = panels[1].tabs[0].id
+      panelStore.moveTabToPanel(tabId, panels[1].id, panels[0].id)
+      return true
     })
 
     expect(moveAttempted).toBe(true)
-
-    // Note: Full panel merge functionality requires proper sync between tabsStore and panelStore.
-    // The move operation executes without errors, which verifies the basic functionality.
   })
 
-  test('拖拽预览层应该存在', async () => {
-    // Check if DragPreviewLayer component is mounted
+  test('drag preview layer exists and is hidden by default', async () => {
+    await waitForStores(mainWindow)
+    await expect(mainWindow.locator('.split-layout-container')).toBeVisible()
+
     const dragPreviewLayer = mainWindow.locator('.drag-preview')
-
-    // Initially it should not be visible
-    const isVisible = await dragPreviewLayer.isVisible().catch(() => false)
-    expect(isVisible).toBe(false)
-
-    // But it should exist in the DOM
-    const exists = await mainWindow.evaluate(() => {
-      const el = document.querySelector('.drag-preview')
-      return el !== null
-    })
-
-    expect(exists).toBe(true)
+    await expect(dragPreviewLayer).toHaveCount(1)
+    await expect(dragPreviewLayer).toBeHidden()
   })
 })

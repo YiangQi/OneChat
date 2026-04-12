@@ -2,15 +2,15 @@
   <div
     ref="tabGroupRef"
     class="tab-group"
+    :class="{ 'tab-group--drag-over': isDragOver }"
     :data-testid="`panel-${panel.id}`"
     @dragover="handleDragOver"
     @drop="handleDrop"
     @dragleave="handleDragLeave"
   >
-    <!-- 标签栏 -->
-    <div v-if="panel.tabs.length > 0" class="tab-bar">
+    <div v-if="tabs.length > 0" class="tab-bar">
       <div
-        v-for="tab in panel.tabs"
+        v-for="tab in tabs"
         :key="tab.id"
         :class="['tab', { active: tab.id === panel.activeTabId }]"
         :draggable="true"
@@ -26,10 +26,9 @@
       </div>
     </div>
 
-    <!-- 内容区 -->
     <div class="tab-content">
       <WebViewContainer
-        v-for="tab in panel.tabs"
+        v-for="tab in tabs"
         :key="tab.id"
         :model="tab.model"
         :visible="tab.id === panel.activeTabId"
@@ -41,10 +40,10 @@
 <script setup lang="ts">
 import { Close } from '@element-plus/icons-vue'
 import { debounce } from 'lodash-es'
-import { onMounted, onUnmounted, ref } from 'vue'
-import { useTabsStore } from '@/stores/tabs'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { usePanelStore } from '@/stores/panel'
-import type { Panel, Tab } from '@/stores/panel'
+import type { Panel } from '@/stores/panel'
+import type { Tab } from '@/stores/tabs'
 import WebViewContainer from './WebViewContainer.vue'
 
 interface Props {
@@ -52,113 +51,102 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const tabsStore = useTabsStore()
 const panelStore = usePanelStore()
-
 const tabGroupRef = ref<HTMLElement>()
+
+const tabs = computed(() => {
+  const resolvedTabs = panelStore.getPanelTabs(props.panel.id)
+  if (resolvedTabs.length > 0 || !props.panel.tabs) {
+    return resolvedTabs
+  }
+
+  return props.panel.tabs
+})
+
+const isDragOver = computed(() => {
+  return panelStore.dragPreview.visible &&
+    panelStore.dragPreview.targetPanelId === props.panel.id
+})
 
 function getIconPath(icon: string) {
   return `online://${icon}`
 }
 
 function activateTab(tabId: string) {
-  const panel = panelStore.findPanel(props.panel.id)
-  if (panel) {
-    panel.activeTabId = tabId
-  }
+  panelStore.activateTab(props.panel.id, tabId)
 }
 
 function closeTab(tabId: string) {
-  // 先从当前面板的 tabs 数组中移除标签页
-  const panel = panelStore.findPanel(props.panel.id)
-  if (panel) {
-    const tabIndex = panel.tabs.findIndex(t => t.id === tabId)
-    if (tabIndex !== -1) {
-      panel.tabs.splice(tabIndex, 1)
-    }
-
-    // 如果没有激活标签页了，清空 activeTabId
-    if (panel.activeTabId === tabId) {
-      panel.activeTabId = panel.tabs[0]?.id || ''
-    }
-
-    // 检查面板是否为空，如果为空则关闭面板
-    if (panel.tabs.length === 0) {
-      panelStore.closePanel(panel.id)
-    }
-  }
-
-  // 然后从 tabsStore 中移除
-  tabsStore.closeTab(tabId)
+  panelStore.closeTab(props.panel.id, tabId)
 }
 
 function handleDragStart(e: DragEvent, tab: Tab) {
-  if (e.dataTransfer) {
-    // 设置全局拖拽状态 - 禁用所有 webview 的 pointer-events
-    panelStore.isDraggingGlobal = true
+  if (!e.dataTransfer) return
 
-    e.dataTransfer.setData('text/plain', JSON.stringify({
-      tabId: tab.id,
-      sourcePanelId: props.panel.id
-    }))
-    e.dataTransfer.effectAllowed = 'move'
+  panelStore.isDraggingGlobal = true
+  e.dataTransfer.setData('text/plain', JSON.stringify({
+    tabId: tab.id,
+    sourcePanelId: props.panel.id
+  }))
+  e.dataTransfer.effectAllowed = 'move'
 
-    // 创建自定义的拖拽图像（幽灵元素）
-    const dragImage = e.target as HTMLElement
-    if (dragImage) {
-      const rect = dragImage.getBoundingClientRect()
+  const dragImage = e.currentTarget as HTMLElement | null
+  if (!dragImage) return
 
-      // 创建克隆元素作为拖拽图像
-      const clone = dragImage.cloneNode(true) as HTMLElement
-      clone.style.position = 'absolute'
-      clone.style.top = '-9999px'
-      clone.style.left = '-9999px'
-      clone.style.width = `${rect.width}px`
-      clone.style.opacity = '0.8'
-      clone.classList.add('tab-dragging')
+  const rect = dragImage.getBoundingClientRect()
+  const clone = dragImage.cloneNode(true) as HTMLElement
+  clone.style.position = 'absolute'
+  clone.style.top = '-9999px'
+  clone.style.left = '-9999px'
+  clone.style.width = `${rect.width}px`
+  clone.style.opacity = '0.8'
+  clone.classList.add('tab-dragging')
 
-      document.body.appendChild(clone)
+  document.body.appendChild(clone)
+  e.dataTransfer.setDragImage(clone, rect.width / 2, rect.height / 2)
 
-      // 设置自定义拖拽图像
-      e.dataTransfer.setDragImage(clone, rect.width / 2, rect.height / 2)
-
-      // 延迟移除克隆元素
-      setTimeout(() => {
-        document.body.removeChild(clone)
-      }, 0)
-    }
-  }
+  setTimeout(() => {
+    clone.remove()
+  }, 0)
 }
 
 const handleDragOverDebounced = debounce((e: DragEvent) => {
+  if (!panelStore.isDraggingGlobal) return
   if (!tabGroupRef.value) return
+
   const rect = tabGroupRef.value.getBoundingClientRect()
   panelStore.handleDragOver(e, props.panel.id, rect)
-}, 16) // 约 60fps
+}, 16)
 
 function handleDragOver(e: DragEvent) {
-  e.preventDefault() // 允许放置
+  if (!panelStore.isDraggingGlobal) return
+
+  e.preventDefault()
   handleDragOverDebounced(e)
 }
 
 function handleDragLeave(e: DragEvent) {
-  // 检查是否真的离开了元素（而不是进入子元素）
   const rect = tabGroupRef.value?.getBoundingClientRect()
   if (!rect) return
 
   const x = e.clientX
   const y = e.clientY
-
-  // 如果鼠标在元素边界内，说明是进入了子元素，不应该隐藏预览
   if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
     return
   }
 
-  // 真正离开了元素，隐藏预览
-  panelStore.dragPreview = {
-    visible: false,
-    position: null,
-    targetPanelId: null
+  hideDragPreview()
+}
+
+function hideDragPreview() {
+  handleDragOverDebounced.cancel()
+
+  if (panelStore.dragPreview.targetPanelId === props.panel.id) {
+    panelStore.dragPreview = {
+      visible: false,
+      position: null,
+      targetPanelId: null
+    }
   }
 }
 
@@ -172,37 +160,28 @@ function handleDrop(e: DragEvent) {
 
     const { tabId } = JSON.parse(data)
     const position = panelStore.dragPreview.position
-
     if (position) {
       panelStore.handleDrop(tabId, position, props.panel.id)
     }
-
-    // 清除全局拖拽状态
-    panelStore.isDraggingGlobal = false
-
-    // 隐藏预览
-    panelStore.dragPreview = {
-      visible: false,
-      position: null,
-      targetPanelId: null
-    }
   } catch (err) {
     console.error('[TabGroup] Drop error:', err)
-    // 确保在错误情况下也清除拖拽状态
-    panelStore.isDraggingGlobal = false
+  } finally {
+    cleanupDragState()
   }
 }
 
-// 全局拖拽结束处理，确保预览层被清除
-function handleDragEnd() {
-  // 清除全局拖拽状态 - 恢复 webview 的 pointer-events
+function cleanupDragState() {
+  handleDragOverDebounced.cancel()
   panelStore.isDraggingGlobal = false
-
   panelStore.dragPreview = {
     visible: false,
     position: null,
     targetPanelId: null
   }
+}
+
+function handleDragEnd() {
+  cleanupDragState()
 }
 
 onMounted(() => {
@@ -211,6 +190,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('dragend', handleDragEnd)
+  handleDragOverDebounced.cancel()
 })
 </script>
 
@@ -325,5 +305,43 @@ onUnmounted(() => {
   flex: 1;
   position: relative;
   overflow: hidden;
+}
+
+.tab-group--drag-over {
+  position: relative;
+}
+
+.tab-group--drag-over::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--accent-color);
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 100;
+  animation: pulse-border 1.5s ease-in-out infinite;
+}
+
+.tab-group--drag-over .tab-bar {
+  background: rgba(0, 122, 204, 0.15);
+}
+
+@keyframes pulse-border {
+  0%, 100% {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 0 rgba(0, 122, 204, 0.4);
+  }
+  50% {
+    border-color: #3399ff;
+    box-shadow: 0 0 0 4px rgba(0, 122, 204, 0.1);
+  }
+}
+
+.theme-light .tab-group--drag-over .tab-bar {
+  background: rgba(0, 122, 204, 0.1);
+}
+
+.theme-dark .tab-group--drag-over .tab-bar {
+  background: rgba(0, 122, 204, 0.2);
 }
 </style>

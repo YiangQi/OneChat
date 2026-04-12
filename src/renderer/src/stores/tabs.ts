@@ -14,6 +14,7 @@ export const useTabsStore = defineStore('tabs', () => {
   const tabs = ref<Tab[]>([])
   const activeTabId = ref<string>('')
   const isFirstOpen = ref(true)
+  let nextTabSequence = 0
 
   function openTab(model: AIModel) {
     const existingTab = tabs.value.find(t => t.modelId === model.id)
@@ -23,7 +24,7 @@ export const useTabsStore = defineStore('tabs', () => {
     }
 
     const newTab: Tab = {
-      id: `tab-${Date.now()}`,
+      id: `tab-${Date.now()}-${nextTabSequence++}`,
       modelId: model.id,
       model,
       createdAt: Date.now()

@@ -114,8 +114,14 @@ describe('PanelStore - 拖放操作', () => {
       url: 'https://chat.openai.com',
       icon: 'chatgpt.png'
     })
+    tabsStore.openTab({
+      id: 'claude',
+      name: 'Claude',
+      url: 'https://claude.ai',
+      icon: 'claude.png'
+    })
     defaultPanel.tabs = [...tabsStore.tabs]
-    defaultPanel.activeTabId = tabsStore.tabs[0].id
+    defaultPanel.activeTabId = tabsStore.tabs[1].id
 
     const tabId = tabsStore.tabs[0].id
 
@@ -124,7 +130,7 @@ describe('PanelStore - 拖放操作', () => {
     // 应该创建了新的分屏
     const parentPanel = panelStore.panels.find(p => p.children)
     expect(parentPanel).toBeDefined()
-    expect(parentPanel?.direction).toBe('horizontal')
+    expect(parentPanel?.direction).toBe('vertical')
   })
 
   it('drop 到 center 应该合并到目标面板', () => {

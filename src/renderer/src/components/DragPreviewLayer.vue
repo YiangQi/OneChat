@@ -14,44 +14,41 @@ const panelStore = usePanelStore()
 
 const previewClass = computed(() => {
   const position = panelStore.dragPreview.position
-  if (!position) return ''
-  return `preview-${position}`
+  return position ? `preview-${position}` : ''
 })
 
 const previewStyle = computed(() => {
   const bounds = panelStore.dragPreview.panelBounds
   if (!bounds || !panelStore.dragPreview.visible) return {}
 
-  const position = panelStore.dragPreview.position
-
-  switch (position) {
+  switch (panelStore.dragPreview.position) {
     case 'left':
       return {
-        left: '0',
+        left: `${bounds.left}px`,
         top: `${bounds.top}px`,
-        bottom: `${100 - bounds.bottom}%`,
-        width: `${bounds.left + bounds.width / 2}px`
+        width: `${bounds.width / 2}px`,
+        height: `${bounds.height}px`
       }
     case 'right':
       return {
         left: `${bounds.left + bounds.width / 2}px`,
         top: `${bounds.top}px`,
-        right: '0',
-        bottom: `${100 - bounds.bottom}%`
+        width: `${bounds.width / 2}px`,
+        height: `${bounds.height}px`
       }
     case 'top':
       return {
         left: `${bounds.left}px`,
-        top: '0',
-        right: `${100 - bounds.right}%`,
-        height: `${bounds.top + bounds.height / 2}px`
+        top: `${bounds.top}px`,
+        width: `${bounds.width}px`,
+        height: `${bounds.height / 2}px`
       }
     case 'bottom':
       return {
         left: `${bounds.left}px`,
         top: `${bounds.top + bounds.height / 2}px`,
-        right: `${100 - bounds.right}%`,
-        bottom: '0'
+        width: `${bounds.width}px`,
+        height: `${bounds.height / 2}px`
       }
     case 'center':
       return {
@@ -74,8 +71,8 @@ const previewStyle = computed(() => {
   pointer-events: none;
   z-index: 1000;
   transition: all 0.1s ease-out;
-  /* Hidden by default */
   display: none;
+  box-sizing: border-box;
 }
 
 .drag-preview--visible {
@@ -83,7 +80,7 @@ const previewStyle = computed(() => {
 }
 
 .preview-center {
-  background: rgba(59, 130, 246, 0.3);
+  background: rgba(59, 130, 246, 0.28);
   border-radius: 8px;
 }
 </style>

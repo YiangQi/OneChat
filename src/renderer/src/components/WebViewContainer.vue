@@ -1,5 +1,9 @@
 <template>
-  <div v-show="visible" class="webview-container" :class="{ 'is-dragging': panelStore.isDraggingGlobal }">
+  <div
+    v-show="visible"
+    class="webview-container"
+    :class="{ 'is-dragging': panelStore.isDraggingGlobal || panelStore.isResizingSplitters }"
+  >
     <webview
       v-if="hasLoaded"
       :src="model.url"

@@ -1,102 +1,73 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { launchElectronApp, getMainWindow } from './helpers/electron'
 
-/**
- * Split Layout Phase 1 E2E Tests
- *
- * Tests basic split panel functionality
- */
-test.describe('第一阶段：基础分屏功能', () => {
+async function waitForStores(page: Page) {
+  await page.waitForFunction(() => {
+    // @ts-ignore
+    return Boolean(window.$stores?.panelStore && window.$stores?.tabsStore)
+  }, { timeout: 5000 })
+}
+
+async function openTabs(page: Page, count: number) {
+  await waitForStores(page)
+  await page.waitForTimeout(1000)
+
+  for (let i = 0; i < count; i++) {
+    await page.locator('.ai-item').nth(i).click()
+    await page.waitForTimeout(300)
+  }
+}
+
+async function dropTab(page: Page, tabIndex: number, position: 'left' | 'right' | 'top' | 'bottom') {
+  await page.evaluate(({ tabIndex, position }) => {
+    // @ts-ignore
+    const { panelStore, tabsStore } = window.$stores || {}
+    if (!panelStore || !tabsStore) return
+
+    const tab = tabsStore.tabs[tabIndex]
+    if (!tab) return
+
+    panelStore.handleDrop(tab.id, position, 'panel-default')
+  }, { tabIndex, position })
+}
+
+test.describe('Split Layout Phase 1 - basic split behavior', () => {
   let electronApp: Awaited<ReturnType<typeof launchElectronApp>>
   let mainWindow: Awaited<ReturnType<typeof getMainWindow>>
 
-  test.beforeAll(async () => {
+  test.beforeEach(async () => {
     electronApp = await launchElectronApp()
     mainWindow = await getMainWindow(electronApp)
   })
 
-  test.afterAll(async () => {
+  test.afterEach(async () => {
     await electronApp.close()
   })
 
-  test('应该显示一个默认面板', async () => {
-    // Wait for app to fully load
-    await mainWindow.waitForTimeout(2000)
-
-    // Check for default panel (tab-group)
-    const tabGroups = mainWindow.locator('.tab-group')
-    const count = await tabGroups.count()
-
-    expect(count).toBe(1)
+  test('shows one default panel', async () => {
+    await waitForStores(mainWindow)
+    await expect.poll(() => mainWindow.locator('.tab-group').count()).toBe(1)
   })
 
-  test('打开 AI 模型后应该在面板中显示', async () => {
-    // Wait for models to load
-    await mainWindow.waitForTimeout(2000)
-
-    // Get initial tab count
+  test('opens an AI model tab in the default panel', async () => {
     const initialTabs = await mainWindow.locator('.tab').count()
+    await openTabs(mainWindow, 1)
 
-    // Click on first AI model
-    const firstAIItem = mainWindow.locator('.ai-item').first()
-    await firstAIItem.click()
-    await mainWindow.waitForTimeout(500)
-
-    // Verify a tab was opened
-    const tabs = await mainWindow.locator('.tab').count()
-    expect(tabs).toBeGreaterThan(initialTabs)
-
-    // Check if tab bar is visible
-    const tabBar = mainWindow.locator('.tab-bar')
-    await expect(tabBar).toBeVisible()
+    await expect.poll(() => mainWindow.locator('.tab').count()).toBeGreaterThan(initialTabs)
+    await expect(mainWindow.locator('.tab-bar')).toBeVisible()
   })
 
-  test('面板应该可以调整大小', async () => {
-    // Wait for models to load
-    await mainWindow.waitForTimeout(2000)
-
-    // Open a tab first
-    const firstAIItem = mainWindow.locator('.ai-item').first()
-    await firstAIItem.click()
-    await mainWindow.waitForTimeout(500)
-
-    // Get initial panel count
+  test('creates a resizable split when the source panel keeps another tab', async () => {
+    await openTabs(mainWindow, 2)
     const initialPanels = await mainWindow.locator('.tab-group').count()
 
-    // Create a split panel using handleDrop (like the passing tests)
-    await mainWindow.evaluate(() => {
-      // @ts-ignore - Accessing store for testing
-      const { panelStore, tabsStore } = window.$stores || {}
-      if (!panelStore || !tabsStore) return
-
-      // Get the first tab
-      const tabs = tabsStore.tabs
-      if (tabs.length === 0) return
-
-      const tabId = tabs[0].id
-
-      // Simulate drop to right
-      panelStore.handleDrop(tabId, 'right', 'panel-default')
-    })
-
-    // Wait for DOM to update
-    await mainWindow.waitForTimeout(500)
-
-    // Verify panel count increased (this proves split was created and is resizable)
-    const finalPanels = await mainWindow.locator('.tab-group').count()
-    expect(finalPanels).toBeGreaterThan(initialPanels)
+    await dropTab(mainWindow, 0, 'right')
+    await expect.poll(() => mainWindow.locator('.tab-group').count()).toBeGreaterThan(initialPanels)
+    await expect(mainWindow.locator('.splitpanes__splitter').first()).toBeVisible()
   })
 
-  test('splitpanes 应该正确渲染', async () => {
-    // Wait for app to fully load
-    await mainWindow.waitForTimeout(2000)
-
-    // Check if splitpanes container exists
-    const splitContainer = mainWindow.locator('.split-layout-container')
-    await expect(splitContainer).toBeVisible()
-
-    // Check if splitpanes root exists
-    const splitpanesRoot = mainWindow.locator('.splitpanes-root')
-    await expect(splitpanesRoot).toBeVisible()
+  test('renders the split layout container', async () => {
+    await expect(mainWindow.locator('.split-layout-container')).toBeVisible()
+    await expect(mainWindow.locator('.splitpanes-root')).toBeVisible()
   })
 })

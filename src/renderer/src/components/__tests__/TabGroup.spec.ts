@@ -7,7 +7,7 @@ import type { Panel } from '@/stores/panel'
 describe('TabGroup', () => {
   const mockPanel: Panel = {
     id: 'panel-1',
-    tabs: [],
+    tabIds: [],
     activeTabId: ''
   }
 
@@ -26,6 +26,7 @@ describe('TabGroup', () => {
   it('应该显示面板中的标签页', () => {
     const panelWithTabs: Panel = {
       ...mockPanel,
+      tabIds: ['tab-1'],
       tabs: [{
         id: 'tab-1',
         modelId: 'chatgpt',

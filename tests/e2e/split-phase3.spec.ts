@@ -1,174 +1,187 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { launchElectronApp, getMainWindow } from './helpers/electron'
 
-/**
- * Split Layout Phase 3 E2E Tests
- *
- * Tests advanced features like auto-merge, multi-level splits, etc.
- */
-test.describe('第三阶段：完善功能', () => {
+async function waitForStores(page: Page) {
+  await page.waitForFunction(() => {
+    // @ts-ignore
+    return Boolean(window.$stores?.panelStore && window.$stores?.tabsStore)
+  }, { timeout: 5000 })
+}
+
+async function openTabs(page: Page, count: number) {
+  await waitForStores(page)
+  await page.waitForTimeout(1000)
+
+  for (let i = 0; i < count; i++) {
+    await page.locator('.ai-item').nth(i).click()
+    await page.waitForTimeout(300)
+  }
+}
+
+test.describe('Split Layout Phase 3 - advanced behavior', () => {
   let electronApp: Awaited<ReturnType<typeof launchElectronApp>>
   let mainWindow: Awaited<ReturnType<typeof getMainWindow>>
 
-  test.beforeAll(async () => {
+  test.beforeEach(async () => {
     electronApp = await launchElectronApp()
     mainWindow = await getMainWindow(electronApp)
   })
 
-  test.afterAll(async () => {
+  test.afterEach(async () => {
     await electronApp.close()
   })
 
-  test.beforeEach(async () => {
-    // Wait for models to load
-    await mainWindow.waitForTimeout(2000)
+  test('empty panels are removed and parent panels merge automatically', async () => {
+    await openTabs(mainWindow, 2)
+
+    await mainWindow.evaluate(() => {
+      // @ts-ignore
+      const { panelStore, tabsStore } = window.$stores || {}
+      panelStore.handleDrop(tabsStore.tabs[0].id, 'right', 'panel-default')
+    })
+
+    await expect.poll(() => mainWindow.locator('.tab-group').count()).toBeGreaterThanOrEqual(2)
+
+    await mainWindow.evaluate(() => {
+      // @ts-ignore
+      const { panelStore } = window.$stores || {}
+      const splitPanel = panelStore.flatPanels.find((panel: any) => panel.id !== 'panel-default')
+      if (splitPanel?.tabs.length) {
+        panelStore.closeTab(splitPanel.id, splitPanel.tabs[0].id)
+      }
+    })
+
+    await expect.poll(() => mainWindow.locator('.tab-group').count()).toBe(1)
   })
 
-  test('关闭最后一个标签页后面板应该自动合并', async () => {
-    // Open two tabs
-    const firstAIItem = mainWindow.locator('.ai-item').nth(0)
-    const secondAIItem = mainWindow.locator('.ai-item').nth(1)
+  test('nested splits can create three rendered panels', async () => {
+    await openTabs(mainWindow, 3)
 
-    await firstAIItem.click()
-    await mainWindow.waitForTimeout(500)
-    await secondAIItem.click()
-    await mainWindow.waitForTimeout(500)
-
-    // Create split panel
-    await mainWindow.evaluate(() => {
-      // @ts-ignore
-      const { panelStore, tabsStore } = window.$stores || {}
-      if (!panelStore || !tabsStore) return
-
-      const tabs = tabsStore.tabs
-      if (tabs.length >= 1) {
-        panelStore.handleDrop(tabs[0].id, 'right', 'panel-default')
-      }
-    })
-
-    // Check we have 2 panels
-    let panelCount = await mainWindow.locator('.tab-group').count()
-    expect(panelCount).toBeGreaterThanOrEqual(2)
-
-    // Close the last tab in the second panel
-    await mainWindow.evaluate(() => {
-      // @ts-ignore
-      const { panelStore, tabsStore } = window.$stores || {}
-      if (!panelStore || !tabsStore) return
-
-      const panels = panelStore.flatPanels
-      if (panels.length >= 2) {
-        // Get tabs from the second panel
-        const secondPanel = panels[1]
-        if (secondPanel.tabs.length > 0) {
-          const lastTab = secondPanel.tabs[secondPanel.tabs.length - 1]
-
-          // Close the tab
-          tabsStore.closeTab(lastTab.id)
-        }
-      }
-    })
-
-    // Wait for auto-close to happen (uses setTimeout)
-    await mainWindow.waitForTimeout(100)
-
-    // Note: Auto-merge functionality is complex and depends on proper sync between
-    // tabsStore and panelStore. For now, we just verify that closing a tab doesn't crash.
-    // The full auto-merge feature will be implemented in a future update.
-  })
-
-  test('多级分屏应该正常工作', async () => {
-    // Open three tabs
-    for (let i = 0; i < 3; i++) {
-      const aiItem = mainWindow.locator('.ai-item').nth(i)
-      await aiItem.click()
-      await mainWindow.waitForTimeout(500)
-    }
-
-    // Create first split (horizontal)
-    await mainWindow.evaluate(() => {
-      // @ts-ignore
-      const { panelStore, tabsStore } = window.$stores || {}
-      if (!panelStore || !tabsStore) return
-
-      const tabs = tabsStore.tabs
-      if (tabs.length >= 1) {
-        panelStore.handleDrop(tabs[0].id, 'right', 'panel-default')
-      }
-    })
-
-    let panelCount = await mainWindow.locator('.tab-group').count()
-    expect(panelCount).toBeGreaterThanOrEqual(2)
-
-    // Create second split (vertical on the right panel)
     const hasThirdPanel = await mainWindow.evaluate(() => {
       // @ts-ignore
       const { panelStore, tabsStore } = window.$stores || {}
-      if (!panelStore || !tabsStore) return false
+      if (!panelStore || !tabsStore || tabsStore.tabs.length < 3) return false
 
-      const panels = panelStore.flatPanels
-      if (panels.length >= 2) {
-        const secondPanel = panels[1]
-        const tabs = secondPanel.tabs
+      panelStore.handleDrop(tabsStore.tabs[0].id, 'right', 'panel-default')
 
-        if (tabs.length >= 1) {
-          panelStore.handleDrop(tabs[0].id, 'bottom', secondPanel.id)
-        }
-      }
+      const defaultPanel = panelStore.findPanel('panel-default')
+      if (!defaultPanel || defaultPanel.tabs.length < 2) return false
 
-      // Should have 3 panels now
+      panelStore.handleDrop(defaultPanel.tabs[0].id, 'bottom', defaultPanel.id)
       return panelStore.flatPanels.length >= 3
     })
 
     expect(hasThirdPanel).toBe(true)
-
-    panelCount = await mainWindow.locator('.tab-group').count()
-    expect(panelCount).toBeGreaterThanOrEqual(3)
+    await expect.poll(() => mainWindow.locator('.tab-group').count()).toBeGreaterThanOrEqual(3)
   })
 
-  test('面板数量不应该超过最大限制', async () => {
-    // Try to create many splits
+  test('right split can expand from two columns to three columns without blank panes', async () => {
+    await openTabs(mainWindow, 3)
+
+    const layout = await mainWindow.evaluate(() => {
+      // @ts-ignore
+      const { panelStore, tabsStore } = window.$stores || {}
+      if (!panelStore || !tabsStore || tabsStore.tabs.length < 3) return null
+
+      panelStore.handleDrop(tabsStore.tabs[0].id, 'right', 'panel-default')
+
+      const rightPanel = panelStore.flatPanels.find((panel: any) => panel.id !== 'panel-default')
+      if (!rightPanel) return null
+
+      panelStore.moveTabToPanel(tabsStore.tabs[2].id, 'panel-default', rightPanel.id)
+      panelStore.handleDrop(tabsStore.tabs[2].id, 'right', rightPanel.id)
+
+      return {
+        leafCount: panelStore.flatPanels.length,
+        tabCounts: panelStore.flatPanels.map((panel: any) => panel.tabs.length),
+        rootSizes: panelStore.panels[0].sizes,
+        rootChildCount: panelStore.panels[0].children?.length ?? 0
+      }
+    })
+
+    expect(layout).toEqual(expect.objectContaining({
+      leafCount: 3,
+      tabCounts: [1, 1, 1],
+      rootChildCount: 3
+    }))
+    expect(layout?.rootSizes).toHaveLength(3)
+    expect(layout?.rootSizes.reduce((sum: number, size: number) => sum + size, 0)).toBeCloseTo(100, 4)
+
+    await expect.poll(() => mainWindow.locator('.tab-group').count()).toBe(3)
+
+    const bounds = await mainWindow.evaluate(() => {
+      const root = document.querySelector('.splitpanes-root')?.getBoundingClientRect()
+      const tabGroups = [...document.querySelectorAll('.tab-group')]
+        .map(element => element.getBoundingClientRect())
+        .sort((a, b) => a.left - b.left)
+      const lastPanel = tabGroups[tabGroups.length - 1]
+
+      if (!root || !lastPanel) return null
+
+      return {
+        rootRight: root.right,
+        lastPanelRight: lastPanel.right,
+        unusedRightSpace: root.right - lastPanel.right
+      }
+    })
+
+    expect(bounds?.unusedRightSpace).toBeLessThan(2)
+
+    await mainWindow.evaluate(() => {
+      // @ts-ignore
+      const { panelStore } = window.$stores || {}
+      if (panelStore?.panels[0]?.children?.length === 3) {
+        panelStore.panels[0].sizes = [20, 20, 20]
+      }
+    })
+
+    const recoveredBounds = await mainWindow.evaluate(() => {
+      const root = document.querySelector('.splitpanes-root')?.getBoundingClientRect()
+      const tabGroups = [...document.querySelectorAll('.tab-group')]
+        .map(element => element.getBoundingClientRect())
+        .sort((a, b) => a.left - b.left)
+      const lastPanel = tabGroups[tabGroups.length - 1]
+
+      if (!root || !lastPanel) return null
+
+      return {
+        unusedRightSpace: root.right - lastPanel.right
+      }
+    })
+
+    expect(recoveredBounds?.unusedRightSpace).toBeLessThan(2)
+  })
+
+  test('panel count does not exceed the maximum limit', async () => {
+    await openTabs(mainWindow, 6)
+
     const panelCount = await mainWindow.evaluate(() => {
       // @ts-ignore
       const { panelStore, tabsStore } = window.$stores || {}
       if (!panelStore || !tabsStore) return 0
 
-      // Open a tab first
-      const firstAI = document.querySelector('.ai-item')
-      if (firstAI) {
-        firstAI.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-      }
-
-      // Try to create many splits
       for (let i = 0; i < 10; i++) {
-        const panels = panelStore.flatPanels
-        if (panels.length > 0 && panelStore.canCreateNewPanel()) {
-          const targetPanel = panels[0]
-          panelStore.handleDrop(tabsStore.tabs[0]?.id || '', 'right', targetPanel.id)
-        }
+        const sourcePanel = panelStore.flatPanels.find((panel: any) => panel.tabs.length > 1)
+        if (!sourcePanel || !panelStore.canCreateNewPanel()) break
+
+        panelStore.handleDrop(sourcePanel.tabs[0].id, 'right', sourcePanel.id)
       }
 
       return panelStore.flatPanels.length
     })
 
-    // Should not exceed 6 panels
     expect(panelCount).toBeLessThanOrEqual(6)
   })
 
-  test('布局有最小尺寸限制', async () => {
-    // Check if splitpanes has min-size configured
-    // The min-size is set via the :min-size prop in PanelRenderer
-    const hasMinSize = await mainWindow.evaluate(() => {
-      const panes = document.querySelectorAll('.splitpanes__pane')
-      if (panes.length > 0) {
-        // Check if the pane has a style attribute or data attribute for min size
-        // The splitpanes library handles min-size internally
-        // We verify panes exist which means size constraints are available
-        return true
-      }
-      return false
+  test('split panes expose minimum-size constrained panes', async () => {
+    await openTabs(mainWindow, 2)
+
+    await mainWindow.evaluate(() => {
+      // @ts-ignore
+      const { panelStore, tabsStore } = window.$stores || {}
+      panelStore.handleDrop(tabsStore.tabs[0].id, 'right', 'panel-default')
     })
 
-    expect(hasMinSize).toBe(true)
+    await expect.poll(() => mainWindow.locator('.splitpanes__pane').count()).toBeGreaterThanOrEqual(2)
   })
 })

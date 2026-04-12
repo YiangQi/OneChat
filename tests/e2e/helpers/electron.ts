@@ -1,51 +1,42 @@
 import { _electron as electron, ElectronApplication, Page } from '@playwright/test'
+import { execSync } from 'child_process'
+import path from 'path'
+
+function createElectronEnv() {
+  const env = { ...process.env }
+  delete env.ELECTRON_RUN_AS_NODE
+  return env
+}
 
 /**
- * Launch the Electron application for E2E testing
- * This function requires the app to be built first
+ * Launch the Electron application for E2E testing.
+ * This helper always clears ELECTRON_RUN_AS_NODE so Electron boots in app mode.
  */
 export async function launchElectronApp() {
-  // Determine the path to the built Electron app
-  // In development, we use the main process entry point
-  // In production, we use the built executable
-
-  // 清除 ELECTRON_RUN_AS_NODE 环境变量，避免 Electron 以 Node.js 模式运行
-  delete process.env.ELECTRON_RUN_AS_NODE
-
+  const launchEnv = createElectronEnv()
   const isDev = process.env.NODE_ENV !== 'production'
 
-  let electronApp: ElectronApplication
-
   if (isDev) {
-    // Development mode: Launch from source
-    // We need to build first or use electron-vite dev mode
     console.log('[E2E] Launching Electron in development mode...')
-
-    // For development E2E tests, we need to start the app
-    // This requires the app to be built or running in dev mode
-    electronApp = await electron.launch({
+    return electron.launch({
       executablePath: require('electron'),
-      args: [require('path').join(__dirname, '../../../out/main/index.js')],
-      timeout: 30000
-    })
-  } else {
-    // Production mode: Use the built app
-    const execPath = process.platform === 'win32'
-      ? require('path').join(__dirname, '../../../dist/OneChat.exe')
-      : require('path').join(__dirname, '../../../dist/OneChat.app/Contents/MacOS/OneChat')
-
-    electronApp = await electron.launch({
-      executablePath: execPath,
+      args: [path.join(__dirname, '../../../out/main/index.js')],
+      env: launchEnv,
       timeout: 30000
     })
   }
 
-  return electronApp
+  const execPath = process.platform === 'win32'
+    ? path.join(__dirname, '../../../dist/OneChat.exe')
+    : path.join(__dirname, '../../../dist/OneChat.app/Contents/MacOS/OneChat')
+
+  return electron.launch({
+    executablePath: execPath,
+    env: launchEnv,
+    timeout: 30000
+  })
 }
 
-/**
- * Wait for the main window to be ready
- */
 export async function getMainWindow(electronApp: ElectronApplication): Promise<Page> {
   await electronApp.firstWindow({ timeout: 15000 })
   const windows = electronApp.windows()
@@ -56,7 +47,6 @@ export async function getMainWindow(electronApp: ElectronApplication): Promise<P
 
   const mainWindow = windows[0]
 
-  // 捕获 console log
   mainWindow.on('console', msg => {
     const type = msg.type()
     const text = msg.text()
@@ -72,28 +62,23 @@ export async function getMainWindow(electronApp: ElectronApplication): Promise<P
     }
   })
 
-  // 捕获页面错误
   mainWindow.on('pageerror', error => {
-    console.error(`[Renderer Page Error]`, error)
+    console.error('[Renderer Page Error]', error)
   })
 
   return mainWindow
 }
 
-/**
- * Setup E2E test environment
- */
 export async function setupE2E() {
   console.log('[E2E] Setting up E2E test environment...')
 
-  // Build the app if needed
   if (!process.env.E2E_SKIP_BUILD) {
     console.log('[E2E] Building app for testing...')
-    const { execSync } = require('child_process')
     try {
-      execSync('npm run build', { stdio: 'inherit' })
+      const buildCommand = process.platform === 'win32' ? 'npm.cmd run build' : 'npm run build'
+      execSync(buildCommand, { stdio: 'inherit', env: createElectronEnv() })
     } catch (error) {
-      console.error('[E2E] Build failed, attempting to run tests anyway...')
+      console.error('[E2E] Build failed, attempting to run tests anyway...', error)
     }
   }
 
@@ -103,9 +88,6 @@ export async function setupE2E() {
   return { electronApp, mainWindow }
 }
 
-/**
- * Teardown E2E test environment
- */
 export async function teardownE2E(electronApp: ElectronApplication) {
   await electronApp.close()
 }
