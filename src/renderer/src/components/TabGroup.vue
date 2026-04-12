@@ -108,6 +108,7 @@ function handleDragStart(e: DragEvent, tab: Tab) {
 const handleDragOverDebounced = debounce((e: DragEvent) => {
   if (!panelStore.isDraggingGlobal) return
   if (!tabGroupRef.value) return
+  if (isOverContainerEdge(e)) return
 
   const rect = tabGroupRef.value.getBoundingClientRect()
   panelStore.handleDragOver(e, props.panel.id, rect)
@@ -115,9 +116,21 @@ const handleDragOverDebounced = debounce((e: DragEvent) => {
 
 function handleDragOver(e: DragEvent) {
   if (!panelStore.isDraggingGlobal) return
+  if (isOverContainerEdge(e)) {
+    handleDragOverDebounced.cancel()
+    return
+  }
 
   e.preventDefault()
   handleDragOverDebounced(e)
+}
+
+function isOverContainerEdge(e: DragEvent) {
+  const container = document.querySelector('.split-layout-container')
+  const rect = container?.getBoundingClientRect()
+  if (!rect) return false
+
+  return Boolean(panelStore.getContainerEdgePosition(e.clientX, e.clientY, rect))
 }
 
 function handleDragLeave(e: DragEvent) {
@@ -146,6 +159,10 @@ function hideDragPreview() {
 }
 
 function handleDrop(e: DragEvent) {
+  if (panelStore.dragPreview.targetScope === 'container') {
+    return
+  }
+
   e.preventDefault()
   e.stopPropagation()
 

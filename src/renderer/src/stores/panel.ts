@@ -22,6 +22,7 @@ export interface DragPreview {
   visible: boolean
   position: 'left' | 'right' | 'top' | 'bottom' | 'center' | null
   targetPanelId: string | null
+  targetScope?: 'panel' | 'container'
   blocked?: boolean
   message?: string
   panelBounds?: {
@@ -52,7 +53,8 @@ export const usePanelStore = defineStore('panel', () => {
   const dragPreview = ref<DragPreview>({
     visible: false,
     position: null,
-    targetPanelId: null
+    targetPanelId: null,
+    targetScope: 'panel'
   })
 
   let nextPanelSequence = 0
@@ -207,6 +209,36 @@ export const usePanelStore = defineStore('panel', () => {
     }
 
     return true
+  }
+
+  function getRootSplitDirection(position: string): 'horizontal' | 'vertical' | null {
+    if (position === 'left' || position === 'right') return 'vertical'
+    if (position === 'top' || position === 'bottom') return 'horizontal'
+    return null
+  }
+
+  function getRootSplitInsertPosition(position: string): 'before' | 'after' | null {
+    if (position === 'left' || position === 'top') return 'before'
+    if (position === 'right' || position === 'bottom') return 'after'
+    return null
+  }
+
+  function getContainerEdgePosition(
+    clientX: number,
+    clientY: number,
+    rect: { left: number, top: number, width: number, height: number }
+  ): 'left' | 'right' | 'top' | 'bottom' | null {
+    const x = clientX - rect.left
+    const y = clientY - rect.top
+    const edgeWidth = Math.min(96, rect.width / 4)
+    const edgeHeight = Math.min(96, rect.height / 4)
+
+    if (x < edgeWidth) return 'left'
+    if (x > rect.width - edgeWidth) return 'right'
+    if (y < edgeHeight) return 'top'
+    if (y > rect.height - edgeHeight) return 'bottom'
+
+    return null
   }
 
   function getInsertionTargetPanel(): Panel | undefined {
@@ -420,6 +452,7 @@ export const usePanelStore = defineStore('panel', () => {
       visible: true,
       position,
       targetPanelId,
+      targetScope: 'panel',
       blocked,
       message: blocked ? '空间太小，无法继续分屏' : undefined,
       panelBounds: {
@@ -433,6 +466,112 @@ export const usePanelStore = defineStore('panel', () => {
     }
   }
 
+  function handleContainerDragOver(e: DragEvent, rect: DOMRect) {
+    e.preventDefault()
+
+    const position = getContainerEdgePosition(e.clientX, e.clientY, rect)
+
+    if (!position) {
+      if (dragPreview.value.targetScope === 'container') {
+        dragPreview.value = {
+          visible: false,
+          position: null,
+          targetPanelId: null,
+          targetScope: 'container',
+          blocked: false,
+          message: undefined
+        }
+      }
+      return
+    }
+
+    const blocked = !canSplitWithinBounds(position, {
+      width: rect.width,
+      height: rect.height
+    })
+
+    dragPreview.value = {
+      visible: true,
+      position,
+      targetPanelId: null,
+      targetScope: 'container',
+      blocked,
+      message: blocked ? '空间太小，无法继续分屏' : undefined,
+      panelBounds: {
+        left: 0,
+        top: 0,
+        right: rect.width,
+        bottom: rect.height,
+        width: rect.width,
+        height: rect.height
+      }
+    }
+  }
+
+  function splitRootPanel(position: 'left' | 'right' | 'top' | 'bottom'): string | null {
+    if (!canCreateNewPanel()) return null
+
+    const direction = getRootSplitDirection(position)
+    const insertPosition = getRootSplitInsertPosition(position)
+    if (!direction || !insertPosition) return null
+
+    const existingRoot = panels.value[0]
+    if (!existingRoot) return null
+
+    const newPanel = createLeafPanel(createPanelId())
+    ensureCompatTabs(newPanel)
+
+    const newRoot: Panel = {
+      id: createPanelId('panel-parent'),
+      tabIds: [],
+      activeTabId: '',
+      direction,
+      children: insertPosition === 'before'
+        ? [newPanel, existingRoot]
+        : [existingRoot, newPanel],
+      sizes: [50, 50]
+    }
+
+    panels.value.splice(0, 1, newRoot)
+    return newPanel.id
+  }
+
+  function handleContainerDrop(tabId: string, position: string) {
+    const sourcePanel = findPanelContainingTab(tabId)
+    if (!sourcePanel) return
+
+    const splitPosition = position as 'left' | 'right' | 'top' | 'bottom'
+    if (!getRootSplitDirection(splitPosition)) return
+
+    if (!canSplitWithinBounds(position, dragPreview.value.panelBounds)) {
+      dragPreview.value = {
+        visible: false,
+        position: null,
+        targetPanelId: null,
+        targetScope: 'container',
+        blocked: false,
+        message: undefined
+      }
+      isDraggingGlobal.value = false
+      return
+    }
+
+    const newPanelId = splitRootPanel(splitPosition)
+    if (newPanelId) {
+      moveTabToPanel(tabId, sourcePanel.id, newPanelId)
+    }
+
+    dragPreview.value = {
+      visible: false,
+      position: null,
+      targetPanelId: null,
+      targetScope: 'container',
+      blocked: false,
+      message: undefined
+    }
+    isDraggingGlobal.value = false
+  }
+
   function handleDrop(tabId: string, position: string, targetPanelId: string) {
     const targetPanel = findPanel(targetPanelId)
     const sourcePanel = findPanelContainingTab(tabId)
@@ -442,6 +581,7 @@ export const usePanelStore = defineStore('panel', () => {
         visible: false,
         position: null,
         targetPanelId: null,
+        targetScope: 'panel',
         blocked: false,
         message: undefined
       }
@@ -483,6 +623,7 @@ export const usePanelStore = defineStore('panel', () => {
       visible: false,
       position: null,
       targetPanelId: null,
+      targetScope: 'panel',
       blocked: false,
       message: undefined
     }
@@ -565,9 +706,12 @@ export const usePanelStore = defineStore('panel', () => {
     setSplitterResizing,
     canCreateNewPanel,
     canSplitWithinBounds,
+    getContainerEdgePosition,
     handleDragOver,
+    handleContainerDragOver,
     moveTabToPanel,
     handleDrop,
+    handleContainerDrop,
     closePanel,
     mergePanel
   }

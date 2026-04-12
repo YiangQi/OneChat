@@ -1,7 +1,9 @@
 <template>
   <div
+    ref="containerRef"
     class="split-layout-container"
     @dragover="handleContainerDragOver"
+    @drop="handleContainerDrop"
     @dragleave="handleContainerDragLeave"
   >
     <div class="splitpanes-root">
@@ -22,11 +24,39 @@ import DragPreviewLayer from './DragPreviewLayer.vue'
 import WebViewLayer from './WebViewLayer.vue'
 
 const panelStore = usePanelStore()
+const containerRef = ref<HTMLElement>()
 const isDragOverContainer = ref(false)
 
 function handleContainerDragOver(e: DragEvent) {
+  if (!panelStore.isDraggingGlobal || !containerRef.value) return
+
   e.preventDefault()
   isDragOverContainer.value = true
+
+  const rect = containerRef.value.getBoundingClientRect()
+  panelStore.handleContainerDragOver(e, rect)
+}
+
+function handleContainerDrop(e: DragEvent) {
+  if (panelStore.dragPreview.targetScope !== 'container') return
+
+  e.preventDefault()
+  e.stopPropagation()
+
+  try {
+    const data = e.dataTransfer?.getData('text/plain')
+    if (!data) return
+
+    const { tabId } = JSON.parse(data)
+    const position = panelStore.dragPreview.position
+    if (tabId && position) {
+      panelStore.handleContainerDrop(tabId, position)
+    }
+  } catch (err) {
+    console.error('[SplitLayoutContainer] Drop error:', err)
+  } finally {
+    isDragOverContainer.value = false
+  }
 }
 
 function handleContainerDragLeave(e: DragEvent) {
@@ -46,7 +76,10 @@ function handleContainerDragLeave(e: DragEvent) {
   panelStore.dragPreview = {
     visible: false,
     position: null,
-    targetPanelId: null
+    targetPanelId: null,
+    targetScope: 'container',
+    blocked: false,
+    message: undefined
   }
   panelStore.isDraggingGlobal = false
 }

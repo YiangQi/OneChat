@@ -228,4 +228,73 @@ describe('PanelStore - 拖放操作', () => {
       height: 500
     })).toBe(true)
   })
+
+  it('container drag over 应该设置容器级右侧预览', () => {
+    const panelStore = usePanelStore()
+    const mockRect = { left: 0, top: 0, width: 1000, height: 800, right: 1000, bottom: 800, x: 0, y: 0, toJSON: () => ({}) }
+    const mockEvent = {
+      clientX: 980,
+      clientY: 400,
+      preventDefault: vi.fn()
+    } as unknown as DragEvent
+
+    panelStore.handleContainerDragOver(mockEvent, mockRect)
+
+    expect(panelStore.dragPreview.targetScope).toBe('container')
+    expect(panelStore.dragPreview.position).toBe('right')
+    expect(panelStore.dragPreview.visible).toBe(true)
+  })
+
+  it('container edge position 应该使用统一的边缘判定', () => {
+    const panelStore = usePanelStore()
+    const mockRect = { left: 10, top: 20, width: 1000, height: 800 }
+
+    expect(panelStore.getContainerEdgePosition(20, 400, mockRect)).toBe('left')
+    expect(panelStore.getContainerEdgePosition(1000, 400, mockRect)).toBe('right')
+    expect(panelStore.getContainerEdgePosition(500, 30, mockRect)).toBe('top')
+    expect(panelStore.getContainerEdgePosition(500, 800, mockRect)).toBe('bottom')
+    expect(panelStore.getContainerEdgePosition(500, 400, mockRect)).toBeNull()
+  })
+
+  it('container drop 到 right 应该创建根级右侧分屏', () => {
+    const panelStore = usePanelStore()
+    const tabsStore = useTabsStore()
+
+    const defaultPanel = panelStore.findPanel('panel-default')!
+    tabsStore.openTab({
+      id: 'chatgpt',
+      name: 'ChatGPT',
+      url: 'https://chat.openai.com',
+      icon: 'chatgpt.png'
+    })
+    tabsStore.openTab({
+      id: 'claude',
+      name: 'Claude',
+      url: 'https://claude.ai',
+      icon: 'claude.png'
+    })
+    defaultPanel.tabs = [...tabsStore.tabs]
+    defaultPanel.activeTabId = tabsStore.tabs[1].id
+
+    panelStore.dragPreview = {
+      visible: true,
+      position: 'right',
+      targetPanelId: null,
+      targetScope: 'container',
+      panelBounds: {
+        left: 0,
+        top: 0,
+        right: 1000,
+        bottom: 800,
+        width: 1000,
+        height: 800
+      }
+    }
+
+    panelStore.handleContainerDrop(tabsStore.tabs[0].id, 'right')
+
+    expect(panelStore.panels[0].direction).toBe('vertical')
+    expect(panelStore.flatPanels).toHaveLength(2)
+    expect(panelStore.flatPanels[1].tabs[0].id).toBe(tabsStore.tabs[0].id)
+  })
 })

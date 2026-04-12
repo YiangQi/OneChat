@@ -75,7 +75,7 @@ describe('PanelStore - splitPanel', () => {
 })
 
 describe('PanelStore - 面板数量限制', () => {
-  const MAX_PANELS = 6
+  const MAX_PANELS = 10
 
   beforeEach(() => {
     setActivePinia(createPinia())
