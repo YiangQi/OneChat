@@ -50,7 +50,8 @@ describe('useWebviewDispatch', () => {
 
     expect(count).toBe(1)
     expect(chatgptWebview.executeJavaScript).not.toHaveBeenCalled()
-    expect(claudeWebview.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('onInputTextChanged'), false)
+    expect(claudeWebview.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('CallBridge.dispatchEvent'), false)
+    expect(claudeWebview.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('inputTextChanged'), false)
   })
 
   it('dispatches to all open tabs', async () => {
@@ -70,8 +71,8 @@ describe('useWebviewDispatch', () => {
     const count = dispatch.dispatchInputTextSended()
 
     expect(count).toBe(2)
-    expect(chatgptWebview.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('onInputTextSended'), false)
-    expect(claudeWebview.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('onInputTextSended'), false)
+    expect(chatgptWebview.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('inputTextSended'), false)
+    expect(claudeWebview.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('inputTextSended'), false)
   })
 
   it('rehydrates file payloads inside the webview script', async () => {
@@ -92,5 +93,6 @@ describe('useWebviewDispatch', () => {
     expect(count).toBe(1)
     expect(webview.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('bytes.buffer'), false)
     expect(webview.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('fileName: arg.name'), false)
+    expect(webview.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('addFileButtonClicked'), false)
   })
 })

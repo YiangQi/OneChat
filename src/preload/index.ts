@@ -14,6 +14,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readOnlineConfig: () => ipcRenderer.invoke(IPC_CHANNELS.CONFIG_READ_ONLINE_JSON),
 
   /**
+   * Reads an online injection script from the app-controlled online directory.
+   * @param scriptPath - Relative script path, e.g. common_inject.js or openai_chatgpt/inject.js
+   */
+  readOnlineScript: (scriptPath: string) => ipcRenderer.invoke(IPC_CHANNELS.ONLINE_READ_SCRIPT, scriptPath),
+
+  /**
    * Creates a new independent window
    * @param tabData - The tab data to initialize the window with
    * @param bounds - Optional window bounds (x, y, width, height)
@@ -82,6 +88,7 @@ declare global {
   interface Window {
     electronAPI: {
       readOnlineConfig: () => Promise<OnlineConfigResult>
+      readOnlineScript: (scriptPath: string) => Promise<string | null>
       createIndependentWindow: (tabData: any, bounds?: { x: number; y: number; width: number; height: number }) => void
       closeAllWindows: () => void
       getSystemTheme: () => Promise<string>

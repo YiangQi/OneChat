@@ -4,6 +4,7 @@ import { config } from '@vue/test-utils'
 // Mock electron API
 global.window.electronAPI = {
   readOnlineConfig: vi.fn(() => Promise.resolve({ models: [], onlineDir: '' })),
+  readOnlineScript: vi.fn(() => Promise.resolve(null)),
   createIndependentWindow: vi.fn(() => Promise.resolve({ success: true, windowId: 1 })),
   closeAllWindows: vi.fn(() => Promise.resolve({ success: true })),
   getSystemTheme: vi.fn(() => Promise.resolve('dark')),

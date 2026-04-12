@@ -27,7 +27,7 @@ describe('ComposerStore', () => {
     expect(store.draftText).toBe('')
     expect(store.height).toBe(store.DEFAULT_HEIGHT)
     expect(store.collapsed).toBe(false)
-    expect(store.targetMode).toBe('active-tab')
+    expect(store.targetMode).toBe('all-tabs')
     expect(store.websiteSidebarVisible).toBe(true)
     expect(store.websiteInputVisible).toBe(true)
   })
@@ -42,16 +42,18 @@ describe('ComposerStore', () => {
     expect(store.height).toBe(store.MAX_HEIGHT)
   })
 
-  it('persists height and collapsed state', () => {
+  it('persists height, collapsed state, and target mode', () => {
     let store = useComposerStore()
     store.setHeight(260)
     store.setCollapsed(true)
+    store.setTargetMode('active-tab')
 
     setActivePinia(createPinia())
     store = useComposerStore()
 
     expect(store.height).toBe(260)
     expect(store.collapsed).toBe(true)
+    expect(store.targetMode).toBe('active-tab')
   })
 
   it('keeps draft text when collapsed', () => {

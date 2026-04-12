@@ -14,7 +14,7 @@ async function resetComposerState(page: Awaited<ReturnType<typeof getMainWindow>
     composerStore?.setCollapsed(false)
     composerStore?.setHeight(180)
     composerStore?.setDraftText('')
-    composerStore?.setTargetMode('active-tab')
+    composerStore?.setTargetMode('all-tabs')
   })
 }
 
@@ -94,5 +94,153 @@ test.describe('Bottom Composer', () => {
     await mainWindow.mouse.up()
 
     await expect.poll(async () => composer.boundingBox().then(box => box?.height ?? 0)).toBeGreaterThan(initialHeight)
+  })
+
+  test('dispatches composer text and send events into the open webview', async () => {
+    await mainWindow.waitForTimeout(1000)
+    await mainWindow.locator('.ai-item').first().click()
+    await expect(mainWindow.locator('.webview-container')).toBeVisible({ timeout: 5000 })
+
+    await expect.poll(async () => {
+      return mainWindow.evaluate(async () => {
+        const webview = document.querySelector('webview') as Electron.WebviewTag | null
+        if (!webview) return false
+        return webview.executeJavaScript('Boolean(window.CallBridge)', false)
+      })
+    }, { timeout: 10000 }).toBe(true)
+
+    await mainWindow.evaluate(async () => {
+      const webview = document.querySelector('webview') as Electron.WebviewTag | null
+      if (!webview) return
+
+      await webview.executeJavaScript(`
+        window.__oneChatE2EEvents = [];
+        window.CallBridge.addEventListener("inputTextChanged", (text) => {
+          window.__oneChatE2EEvents.push(["inputTextChanged", text]);
+        });
+        window.CallBridge.addEventListener("inputTextSended", () => {
+          window.__oneChatE2EEvents.push(["inputTextSended"]);
+        });
+      `, false)
+    })
+
+    await mainWindow.locator('[data-testid="composer-textarea"]').fill('hello bridge')
+    await mainWindow.locator('.send-button').click()
+
+    await expect.poll(async () => {
+      return mainWindow.evaluate(async () => {
+        const webview = document.querySelector('webview') as Electron.WebviewTag | null
+        if (!webview) return []
+        return webview.executeJavaScript('window.__oneChatE2EEvents || []', false)
+      })
+    }, { timeout: 5000 }).toEqual([
+      ['inputTextChanged', 'hello bridge'],
+      ['inputTextChanged', 'hello bridge'],
+      ['inputTextSended']
+    ])
+  })
+
+  test('dispatches composer events to previously opened hidden webviews', async () => {
+    await mainWindow.waitForTimeout(1000)
+    await mainWindow.locator('.ai-item').nth(0).click()
+    await expect(mainWindow.locator('webview')).toHaveCount(1, { timeout: 5000 })
+
+    await mainWindow.locator('.ai-item').nth(1).click()
+    await expect(mainWindow.locator('webview')).toHaveCount(2, { timeout: 5000 })
+
+    await mainWindow.locator('[data-testid="composer-target-select"]').selectOption('all-tabs')
+
+    await expect.poll(async () => {
+      return mainWindow.evaluate(async () => {
+        const webviews = [...document.querySelectorAll('webview')] as Electron.WebviewTag[]
+        const states = await Promise.all(webviews.map(webview => {
+          return webview.executeJavaScript('Boolean(window.CallBridge)', false)
+        }))
+        return states.every(Boolean)
+      })
+    }, { timeout: 10000 }).toBe(true)
+
+    await mainWindow.evaluate(async () => {
+      const webviews = [...document.querySelectorAll('webview')] as Electron.WebviewTag[]
+      await Promise.all(webviews.map((webview, index) => {
+        return webview.executeJavaScript(`
+          window.__oneChatE2EEvents = [];
+          window.__oneChatE2EIndex = ${index};
+          window.CallBridge.addEventListener("inputTextChanged", (text) => {
+            window.__oneChatE2EEvents.push(["inputTextChanged", text]);
+          });
+          window.CallBridge.addEventListener("inputTextSended", () => {
+            window.__oneChatE2EEvents.push(["inputTextSended"]);
+          });
+        `, false)
+      }))
+    })
+
+    await mainWindow.locator('[data-testid="composer-textarea"]').fill('hello all tabs')
+    await mainWindow.locator('.send-button').click()
+
+    await expect.poll(async () => {
+      return mainWindow.evaluate(async () => {
+        const webviews = [...document.querySelectorAll('webview')] as Electron.WebviewTag[]
+        return Promise.all(webviews.map(webview => {
+          return webview.executeJavaScript('window.__oneChatE2EEvents || []', false)
+        }))
+      })
+    }, { timeout: 5000 }).toEqual([
+      [
+        ['inputTextChanged', 'hello all tabs'],
+        ['inputTextChanged', 'hello all tabs'],
+        ['inputTextSended']
+      ],
+      [
+        ['inputTextChanged', 'hello all tabs'],
+        ['inputTextChanged', 'hello all tabs'],
+        ['inputTextSended']
+      ]
+    ])
+  })
+
+  test('defaults composer dispatch to all opened webviews', async () => {
+    await mainWindow.waitForTimeout(1000)
+    await mainWindow.locator('.ai-item').nth(0).click()
+    await mainWindow.locator('.ai-item').nth(1).click()
+    await expect(mainWindow.locator('webview')).toHaveCount(2, { timeout: 5000 })
+    await expect(mainWindow.locator('[data-testid="composer-target-select"]')).toHaveValue('all-tabs')
+
+    await expect.poll(async () => {
+      return mainWindow.evaluate(async () => {
+        const webviews = [...document.querySelectorAll('webview')] as Electron.WebviewTag[]
+        const states = await Promise.all(webviews.map(webview => {
+          return webview.executeJavaScript('Boolean(window.CallBridge)', false)
+        }))
+        return states.every(Boolean)
+      })
+    }, { timeout: 10000 }).toBe(true)
+
+    await mainWindow.evaluate(async () => {
+      const webviews = [...document.querySelectorAll('webview')] as Electron.WebviewTag[]
+      await Promise.all(webviews.map(webview => {
+        return webview.executeJavaScript(`
+          window.__oneChatE2EEvents = [];
+          window.CallBridge.addEventListener("inputTextChanged", (text) => {
+            window.__oneChatE2EEvents.push(["inputTextChanged", text]);
+          });
+        `, false)
+      }))
+    })
+
+    await mainWindow.locator('[data-testid="composer-textarea"]').fill('default all')
+
+    await expect.poll(async () => {
+      return mainWindow.evaluate(async () => {
+        const webviews = [...document.querySelectorAll('webview')] as Electron.WebviewTag[]
+        return Promise.all(webviews.map(webview => {
+          return webview.executeJavaScript('window.__oneChatE2EEvents || []', false)
+        }))
+      })
+    }, { timeout: 5000 }).toEqual([
+      [['inputTextChanged', 'default all']],
+      [['inputTextChanged', 'default all']]
+    ])
   })
 })

@@ -20,6 +20,7 @@ export interface ComposerState {
 export interface PersistedComposerState {
   height?: number
   collapsed?: boolean
+  targetMode?: ComposerTargetMode
 }
 
 export const useComposerStore = defineStore('composer', () => {
@@ -27,7 +28,7 @@ export const useComposerStore = defineStore('composer', () => {
   const draftText = ref('')
   const height = ref(DEFAULT_HEIGHT)
   const collapsed = ref(false)
-  const targetMode = ref<ComposerTargetMode>('active-tab')
+  const targetMode = ref<ComposerTargetMode>('all-tabs')
   const websiteSidebarVisible = ref(true)
   const websiteInputVisible = ref(true)
 
@@ -47,6 +48,10 @@ export const useComposerStore = defineStore('composer', () => {
         if (typeof parsed.collapsed === 'boolean') {
           collapsed.value = parsed.collapsed
         }
+
+        if (parsed.targetMode === 'active-tab' || parsed.targetMode === 'all-tabs') {
+          targetMode.value = parsed.targetMode
+        }
       }
     } catch (error) {
       console.warn('[ComposerStore] Failed to load persisted state:', error)
@@ -63,7 +68,8 @@ export const useComposerStore = defineStore('composer', () => {
     try {
       const state: PersistedComposerState = {
         height: height.value,
-        collapsed: collapsed.value
+        collapsed: collapsed.value,
+        targetMode: targetMode.value
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
     } catch (error) {
@@ -93,6 +99,7 @@ export const useComposerStore = defineStore('composer', () => {
 
   function setTargetMode(mode: ComposerTargetMode) {
     targetMode.value = mode
+    persistState()
   }
 
   function setWebsiteSidebarVisible(visible: boolean) {
@@ -108,7 +115,7 @@ export const useComposerStore = defineStore('composer', () => {
   }
 
   // Auto-persist when height or collapsed state changes
-  watch([height, collapsed], () => {
+  watch([height, collapsed, targetMode], () => {
     persistState()
   })
 

@@ -2,7 +2,7 @@ import { app, ipcMain, protocol, nativeTheme, dialog, BrowserWindow } from 'elec
 import { createMainWindow, closeAllWindows, createIndependentWindow, registerWindowIpcHandlers } from './window'
 import { readOnlineConfig } from './config'
 import { IPC_CHANNELS } from '../shared/constants'
-import { join } from 'path'
+import { join, resolve, relative } from 'path'
 import { readFile } from 'fs/promises'
 import { extname } from 'path'
 
@@ -67,6 +67,30 @@ function registerIpcHandlers() {
         models: [],
         onlineDir: ''
       }
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.ONLINE_READ_SCRIPT, async (_event, scriptPath: string) => {
+    if (typeof scriptPath !== 'string' || !scriptPath.endsWith('.js')) {
+      console.warn('[OnlineScript] Invalid script path:', scriptPath)
+      return null
+    }
+
+    try {
+      const basePath = app.isPackaged ? join(process.resourcesPath, 'online') : join(process.cwd(), 'online')
+      const resolvedBase = resolve(basePath)
+      const resolvedScript = resolve(resolvedBase, scriptPath)
+      const relativePath = relative(resolvedBase, resolvedScript)
+
+      if (relativePath.startsWith('..') || relativePath.includes(':')) {
+        console.warn('[OnlineScript] Refused script outside online directory:', scriptPath)
+        return null
+      }
+
+      return await readFile(resolvedScript, 'utf-8')
+    } catch (error) {
+      console.warn('[OnlineScript] Failed to read script:', scriptPath, error)
+      return null
     }
   })
 

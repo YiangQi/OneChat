@@ -1,4 +1,5 @@
 import { useComposerTargets } from './useComposerTargets'
+import { createCallBridgeDispatchScript } from '@/utils/webviewInjection'
 
 /**
  * Event types that can be dispatched to webview adapters.
@@ -29,65 +30,35 @@ export interface FilePayload {
 }
 
 /**
- * Safely execute a function in a webview's context.
+ * Safely dispatch an adapter event in a webview's context.
  * Returns true if successful, false otherwise.
  */
-function executeWebviewFunction(
+function executeWebviewEvent(
   webview: Electron.WebviewTag,
-  functionName: string,
+  eventName: string,
   ...args: unknown[]
 ): boolean {
   try {
     // Check if webview is ready
     if (!webview.getAttribute('src')) {
-      console.warn(`[WebviewDispatch] Webview not ready for ${functionName}`)
+      console.warn(`[WebviewDispatch] Webview not ready for ${eventName}`)
       return false
     }
 
-    const serializedArgs = JSON.stringify(args)
-
-    // Execute the function in the webview's context. File payloads cross the
-    // boundary as base64 JSON and are rehydrated before calling provider code.
-    const code = `
-      (() => {
-        const fn = window["${functionName}"];
-        if (typeof fn !== "function") return false;
-        const args = ${serializedArgs}.map((arg) => {
-          if (!arg || typeof arg !== "object" || !("data" in arg) || !("name" in arg) || !("type" in arg)) {
-            return arg;
-          }
-
-          const binary = atob(arg.data);
-          const bytes = new Uint8Array(binary.length);
-          for (let i = 0; i < binary.length; i += 1) {
-            bytes[i] = binary.charCodeAt(i);
-          }
-
-          return {
-            data: bytes.buffer,
-            fileName: arg.name,
-            name: arg.name,
-            fileType: arg.type,
-            type: arg.type
-          };
-        });
-
-        return fn(...args);
-      })()
-    `
+    const code = createCallBridgeDispatchScript(eventName, args)
     webview.executeJavaScript(code, false)
       .then((result: unknown) => {
         if (result === false) {
-          console.warn(`[WebviewDispatch] Function ${functionName} not found or returned false`)
+          console.warn(`[WebviewDispatch] CallBridge unavailable for ${eventName}`)
         }
       })
       .catch((error: Error) => {
-        console.error(`[WebviewDispatch] Error executing ${functionName}:`, error)
+        console.error(`[WebviewDispatch] Error dispatching ${eventName}:`, error)
       })
 
     return true
   } catch (error) {
-    console.error(`[WebviewDispatch] Exception calling ${functionName}:`, error)
+    console.error(`[WebviewDispatch] Exception dispatching ${eventName}:`, error)
     return false
   }
 }
@@ -112,11 +83,7 @@ export function useWebviewDispatch() {
       const webview = getWebviewForTab(target.tab.id)
       if (!webview) continue
 
-      // Map event names to inject.js function names
-      const functionName = `on${eventName.charAt(0).toUpperCase() + eventName.slice(1)}`
-      const normalizedFunctionName = functionName.replace(/([A-Z])/g, '$1').replace(/([a-z])([A-Z])/g, '$1$2')
-
-      if (executeWebviewFunction(webview, normalizedFunctionName, ...args)) {
+      if (executeWebviewEvent(webview, eventName, ...args)) {
         successCount++
       }
     }
@@ -136,8 +103,7 @@ export function useWebviewDispatch() {
     const webview = getWebviewForTab(tabId)
     if (!webview) return false
 
-    const functionName = `on${eventName.charAt(0).toUpperCase() + eventName.slice(1)}`
-    return executeWebviewFunction(webview, functionName, ...args)
+    return executeWebviewEvent(webview, eventName, ...args)
   }
 
   /**
