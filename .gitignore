@@ -146,3 +146,5 @@ vite.config.ts.timestamp-*
 .superpowers
 playwright-report/*
 test-results/*
+
+.claude
