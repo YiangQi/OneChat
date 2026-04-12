@@ -220,10 +220,12 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   height: 38px;
-  margin-top: 2px;
+  margin-top: 1px;
   padding: 0 12px;
   min-width: 120px;
   max-width: 200px;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
   background: var(--bg-tertiary);
   border-right: 1px solid #666;
   cursor: move;

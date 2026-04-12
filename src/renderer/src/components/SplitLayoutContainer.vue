@@ -28,7 +28,8 @@ function handleContainerDragOver(e: DragEvent) {
 }
 
 function handleContainerDragLeave(e: DragEvent) {
-  // 检查是否真的离开了容器（而不是进入子元素�?  const container = e.currentTarget as HTMLElement
+  // 检查是否真的离开了容器（而不是进入子元素）
+  const container = e.currentTarget as HTMLElement
   const rect = container.getBoundingClientRect()
 
   const x = e.clientX
@@ -39,7 +40,7 @@ function handleContainerDragLeave(e: DragEvent) {
     return
   }
 
-  // 真正离开了容器，清除所有拖拽状�?  isDragOverContainer.value = false
+  // 真正离开了容器，清除所有拖拽状�?  isDragOverContainer.value = false
   panelStore.dragPreview = {
     visible: false,
     position: null,
