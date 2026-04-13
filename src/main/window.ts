@@ -1,8 +1,20 @@
-import { BrowserWindow, screen, ipcMain } from 'electron'
+import { BrowserWindow, ipcMain, nativeTheme } from 'electron'
 import { join } from 'path'
 import { IPC_CHANNELS } from '../shared/constants'
 
 let independentWindows: Array<{ window: BrowserWindow; tabData: any }> = []
+
+function getInitialBackgroundColor() {
+  return nativeTheme.shouldUseDarkColors ? '#1e1e1e' : '#ffffff'
+}
+
+function showWhenReady(win: BrowserWindow) {
+  win.once('ready-to-show', () => {
+    if (!win.isDestroyed()) {
+      win.show()
+    }
+  })
+}
 
 export function createMainWindow() {
   const mainWindow = new BrowserWindow({
@@ -13,7 +25,8 @@ export function createMainWindow() {
     frame: true,
     autoHideMenuBar: true,
     resizable: true,
-    backgroundColor: '#1e1e1e',
+    show: false,
+    backgroundColor: getInitialBackgroundColor(),
     webPreferences: {
       webviewTag: true,
       nodeIntegration: false,
@@ -21,6 +34,8 @@ export function createMainWindow() {
       preload: join(__dirname, '../preload/index.js')
     }
   })
+
+  showWhenReady(mainWindow)
 
   if (process.env.NODE_ENV === 'development') {
     mainWindow.loadURL('http://localhost:5173')
@@ -42,6 +57,8 @@ export function createIndependentWindow(tabData: any, bounds?: { x: number; y: n
     minHeight: 400,
     frame: true,
     resizable: true,
+    show: false,
+    backgroundColor: getInitialBackgroundColor(),
     webPreferences: {
       webviewTag: true,
       nodeIntegration: false,
@@ -49,6 +66,8 @@ export function createIndependentWindow(tabData: any, bounds?: { x: number; y: n
       preload: join(__dirname, '../preload/index.js')
     }
   })
+
+  showWhenReady(win)
 
   if (process.env.NODE_ENV === 'development') {
     win.loadURL('http://localhost:5173?type=independent')

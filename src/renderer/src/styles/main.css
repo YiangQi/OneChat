@@ -10,6 +10,7 @@ html, body, #app {
   height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overflow: hidden;
+  background: #ffffff;
 }
 
 /* 默认浅色主题 */
@@ -53,4 +54,10 @@ html, body, #app {
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
+}
+
+@media (prefers-color-scheme: dark) {
+  html, body, #app {
+    background: #1e1e1e;
+  }
 }

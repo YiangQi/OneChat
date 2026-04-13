@@ -18,7 +18,6 @@ import ActivityBar from '@/components/ActivityBar.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import SplitLayoutContainer from '@/components/SplitLayoutContainer.vue'
 import BottomComposer from '@/components/BottomComposer.vue'
-import SettingsButton from '@/components/SettingsButton.vue'
 import SettingsDialog from '@/components/SettingsDialog.vue'
 
 const themeStore = useThemeStore()
