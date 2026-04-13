@@ -11,18 +11,21 @@
  * @param {Number} args.appTheme: The client theme. 0 / system; 1 / light; 2 / dark.
  */
 function onLoadEnded(args) {
-    console.log('args:' + JSON.stringify(args))
+    console.log('[Aliyun Tongyi] onLoadEnded args:' + JSON.stringify(args))
     onAppThemeChanged(args.appTheme);
 
     let maxCnt = 10;
     const timerId = setInterval(() => {
-        console.log('onLoadEnded timer run');
+        console.log('[Aliyun Tongyi] onLoadEnded timer run, maxCnt:', maxCnt);
         if (maxCnt-- < 0) {
+            console.log('[Aliyun Tongyi] onLoadEnded timeout, calling webLoadEnded');
             clearInterval(timerId);
             invokeBrowserMethod("webLoadEnded");
         }
-        if (onInputBoxVisibleChanged(args.isInputBoxVisible)
-            && onSidebarVisibleChanged(args.isSidebarVisible)) {
+        const inputBoxResult = onInputBoxVisibleChanged(args.isInputBoxVisible);
+        const sidebarResult = onSidebarVisibleChanged(args.isSidebarVisible);
+        console.log('[Aliyun Tongyi] onLoadEnded sync results:', { inputBoxResult, sidebarResult });
+        if (inputBoxResult && sidebarResult) {
             clearInterval(timerId);
             invokeBrowserMethod("webLoadEnded");
         }
@@ -41,6 +44,10 @@ function onLoadEnded(args) {
  */
 function onUrlChanged(args) {
     console.log(`onUrlChanged: ${JSON.stringify(args)} ready: ${document.readyState}`);
+    const currentId = _getCurrentConversationIdFromUrl();
+    if (currentId) {
+        invokeBrowserMethod("webConversationChanged", currentId);
+    }
     if (document.readyState !== "complete") {
         return
     }
@@ -124,28 +131,126 @@ function onInputBoxVisibleChanged(visible) {
  * @returns whether changing the visibility of sidebar success.
  */
 function onSidebarVisibleChanged(visible) {
-    const closeSpan = document.querySelector('span[data-icon-type="qwpcicon-sidebarLeft"]');
-    const openSpan = document.querySelector('span[data-icon-type="qwpcicon-sidebarRight"]');
-    if (!openSpan && !closeSpan) {
+    console.log('[Aliyun Tongyi] onSidebarVisibleChanged called, visible:', visible);
+
+    // 检查侧边栏容器的 transform 状态
+    const transformContainer = document.querySelector('div[class*="translate-x"]');
+    let isSidebarVisible = false;
+
+    if (transformContainer) {
+        // 检查是否有 -translate-x-full 类（表示侧边栏被隐藏）
+        const classList = transformContainer.classList;
+        isSidebarVisible = !classList.contains('-translate-x-full') &&
+                          !classList.contains('translate-x-full') &&
+                          !classList.contains('translate-x-[100%]') &&
+                          !classList.contains('translate-x-[-100%]');
+    }
+
+    console.log('[Aliyun Tongyi] Current sidebar visible state:', isSidebarVisible, 'target:', visible);
+
+    // 如果状态已经匹配，直接返回 true
+    if (isSidebarVisible === visible) {
+        console.log('[Aliyun Tongyi] Sidebar already in target state, returning true');
+        return true;
+    }
+
+    // 需要切换状态
+    if (visible) {
+        // 需要显示侧边栏 - 点击 sidebarRight 或查找展开按钮
+        const sidebarRight = document.querySelector('span[data-icon-type="qwpcicon-sidebarRight"]');
+        if (sidebarRight) {
+            console.log('[Aliyun Tongyi] Clicking sidebarRight to show sidebar');
+            sidebarRight.click();
+            return true;
+        }
+
+        // 尝试其他可能的选择器
+        const expandButton = document.querySelector('button[aria-label*="展开"]') ||
+                             document.querySelector('button[aria-label*="expand"]') ||
+                             document.querySelector('button[title*="展开"]') ||
+                             document.querySelector('button[title*="expand"]');
+        if (expandButton) {
+            console.log('[Aliyun Tongyi] Clicking expand button');
+            expandButton.click();
+            return true;
+        }
+    } else {
+        // 需要隐藏侧边栏 - 点击 sidebarLeft 或查找折叠按钮
+        const sidebarLeft = document.querySelector('span[data-icon-type="qwpcicon-sidebarLeft"]');
+        if (sidebarLeft) {
+            console.log('[Aliyun Tongyi] Clicking sidebarLeft to hide sidebar');
+            // 可能有多个 sidebarLeft，找到可见的那个
+            const allSidebarLeft = document.querySelectorAll('span[data-icon-type="qwpcicon-sidebarLeft"]');
+            for (const btn of allSidebarLeft) {
+                if (btn.offsetParent !== null) {
+                    btn.click();
+                    break;
+                }
+            }
+            return true;
+        }
+
+        // 尝试其他可能的选择器
+        const collapseButton = document.querySelector('button[aria-label*="收起"]') ||
+                              document.querySelector('button[aria-label*="collapse"]') ||
+                              document.querySelector('button[title*="收起"]') ||
+                              document.querySelector('button[title*="collapse"]');
+        if (collapseButton) {
+            console.log('[Aliyun Tongyi] Clicking collapse button');
+            collapseButton.click();
+            return true;
+        }
+    }
+
+    // Generic fallback for non-Tongyi pages
+    console.log('[Aliyun Tongyi] No Tongyi icons found, trying generic fallback');
+    const sidebar = document.querySelector('aside') ||
+        document.querySelector('nav[class*="sidebar"]') ||
+        document.querySelector('div[class*="sidebar"]') ||
+        document.querySelector('div[class*="side-bar"]') ||
+        document.querySelector('div[class*="sider"]') ||
+        document.querySelector('div[class*="history"]');
+
+    console.log('[Aliyun Tongyi] Found generic sidebar:', !!sidebar);
+    if (!sidebar) {
+        console.log('[Aliyun Tongyi] No sidebar found, returning false');
         return false;
     }
-    if (visible) {
-        const closeSpan = document.querySelector('span[data-icon-type="qwpcicon-sidebarLeft"]');
-        if(closeSpan) {
-            return;
-        }
-        const openSpan = document.querySelector('span[data-icon-type="qwpcicon-sidebarRight"]');
-        if (openSpan) {
-            openSpan.click();
-        }
-        return true;
-    } else {
-        const closeSpan = document.querySelector('span[data-icon-type="qwpcicon-sidebarLeft"]');
-        if (closeSpan) {
-            closeSpan.click();
-        }
+
+    const sidebarVisible = getComputedStyle(sidebar).display !== 'none' &&
+        getComputedStyle(sidebar).visibility !== 'hidden' &&
+        sidebar.getBoundingClientRect().width > 0;
+
+    console.log('[Aliyun Tongyi] Generic sidebar visible:', sidebarVisible, 'target:', visible);
+
+    if (visible === sidebarVisible) {
+        console.log('[Aliyun Tongyi] Generic sidebar already in target state, returning true');
         return true;
     }
+
+    // Find and click the toggle button
+    const toggleButton = document.querySelector('button[aria-label*="侧边栏"]') ||
+        document.querySelector('button[aria-label*="sidebar" i]') ||
+        document.querySelector('button[title*="侧边栏"]') ||
+        document.querySelector('button[title*="sidebar" i]') ||
+        document.querySelector('[role="button"][aria-label*="侧边栏"]') ||
+        document.querySelector('[role="button"][aria-label*="sidebar" i]') ||
+        document.querySelector('[class*="sidebar"][role="button"]') ||
+        document.querySelector('[class*="side-bar"][role="button"]') ||
+        document.querySelector('[class*="collapse"][role="button"]') ||
+        document.querySelector('[class*="expand"][role="button"]') ||
+        document.querySelector('button[id*="sidebar"]') ||
+        document.querySelector('button[id*="toggle"]');
+
+    console.log('[Aliyun Tongyi] Found generic toggle button:', !!toggleButton);
+    if (toggleButton) {
+        console.log('[Aliyun Tongyi] Clicking generic toggle button');
+        toggleButton.click();
+        return true;
+    }
+
+    console.log('[Aliyun Tongyi] No toggle button found, returning false');
+    return false;
 }
 
 /**
@@ -208,15 +313,82 @@ function onAddFileButtonClicked(fileInfo) {
  * @param {*} conversationTitle
  */
 function onConversationClicked(conversationId, conversationTitle) {
-    onSidebarVisibleChanged(true);
+    console.log('[Aliyun Tongyi] onConversationClicked called:', { conversationId, conversationTitle });
+
+    // 首先确保侧边栏是展开的
+    const transformContainer = document.querySelector('div[class*="translate-x"]');
+    let isSidebarVisible = false;
+
+    if (transformContainer) {
+        const classList = transformContainer.classList;
+        isSidebarVisible = !classList.contains('-translate-x-full') &&
+                          !classList.contains('translate-x-full');
+    }
+
+    console.log('[Aliyun Tongyi] Sidebar visible before click:', isSidebarVisible);
+
+    // 如果侧边栏不可见，先展开它
+    if (!isSidebarVisible) {
+        console.log('[Aliyun Tongyi] Sidebar is collapsed, expanding first');
+        const sidebarRight = document.querySelector('span[data-icon-type="qwpcicon-sidebarRight"]');
+        if (sidebarRight) {
+            sidebarRight.click();
+        }
+    }
+
+    // 等待侧边栏展开动画完成
     setTimeout(() => {
-        const divList = document.querySelectorAll('div[class*="sider-scrollbar"] > div');
-        for (let i = 0; i < divList.length; i++) {
-            if (divList[i].innerText == conversationTitle) {
-                divList[i].querySelector('button').closest('div').click();
+        console.log('[Aliyun Tongyi] Looking for conversation to click:', conversationTitle);
+
+        // 查找历史会话项
+        const scrollbar = document.querySelector('div[class*="sider-scrollbar"]');
+        if (!scrollbar) {
+            console.warn('[Aliyun Tongyi] No scrollbar found');
+            return;
+        }
+
+        // 获取所有直接子元素
+        const allItems = scrollbar.children;
+        console.log(`[Aliyun Tongyi] Found ${allItems.length} items in scrollbar`);
+
+        for (let i = 0; i < allItems.length; i++) {
+            const item = allItems[i];
+            const itemText = (item.textContent || '').trim();
+
+            // 跳过太长的文本（可能是容器）或太短的文本（可能是分组标题）
+            if (itemText.length > 100 || itemText.length < 5) continue;
+
+            console.log(`[Aliyun Tongyi] Checking item [${i}]: "${itemText.substring(0, 30)}"`);
+
+            // 检查文本是否匹配
+            if (itemText === conversationTitle || itemText.includes(conversationTitle)) {
+                console.log('[Aliyun Tongyi] Found matching conversation item');
+
+                // 查找带有 cursor-pointer 类的可点击 div
+                const clickableDiv = item.querySelector('div[class*="cursor-pointer"]');
+                if (clickableDiv) {
+                    console.log('[Aliyun Tongyi] Clicking cursor-pointer div');
+                    clickableDiv.click();
+                    return;
+                }
+
+                // 如果没有找到 cursor-pointer div，尝试点击其他可点击元素
+                const button = item.querySelector('button, [role="button"], [onclick]');
+                if (button) {
+                    console.log('[Aliyun Tongyi] Clicking button element');
+                    button.click();
+                    return;
+                }
+
+                // 最后尝试：直接点击元素本身
+                console.log('[Aliyun Tongyi] Clicking item directly');
+                item.click();
+                return;
             }
         }
-    }, 500);
+
+        console.warn('[Aliyun Tongyi] Could not find conversation to click:', conversationTitle);
+    }, 600);
 }
 
 /**
@@ -309,13 +481,18 @@ function onQuestionDownButtonClicked() {
         alert("Has been scrolled to bottom.");
     }
 }
+function _getCurrentConversationIdFromUrl() {
+    const match = location.href.match(/(?:chat|session)[=/]([^/?#&]+)/i);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+
 /**
  * When the script executes, this method will be mounted to capture request data.
- * You need to capture the conversation list request within this method, 
- * then call 'invokeBrowserMethod("webConversationListUpdated", conversationArray);' 
+ * You need to capture the conversation list request within this method,
+ * then call 'invokeBrowserMethod("webConversationListUpdated", conversationArray);'
  * to update the sidebar's conversation list.
- * You also need to capture the current conversation list in this method, 
- * then call 'invokeBrowserMethod("webConversationChanged", id);' 
+ * You also need to capture the current conversation list in this method,
+ * then call 'invokeBrowserMethod("webConversationChanged", id);'
  * to make the sidebar select the current conversation.
  */
 function hookHttpsRequest() {

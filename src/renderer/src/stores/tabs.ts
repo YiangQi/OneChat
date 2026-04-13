@@ -51,10 +51,6 @@ export const useTabsStore = defineStore('tabs', () => {
     // 分栏功能暂时禁用，等待后续实现
   }
 
-  function moveTab(tabId: string, targetWindow: number) {
-    // Will be implemented with Golden Layout
-  }
-
   function activateTab(id: string) {
     const tab = tabs.value.find(t => t.id === id)
     if (tab) {
@@ -69,7 +65,6 @@ export const useTabsStore = defineStore('tabs', () => {
     openTab,
     closeTab,
     activateTab,
-    splitTab,
-    moveTab
+    splitTab
   }
 })
