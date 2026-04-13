@@ -1,10 +1,28 @@
 import { _electron as electron, ElectronApplication, Page } from '@playwright/test'
 import { execSync } from 'child_process'
+import { readFileSync } from 'fs'
+import os from 'os'
 import path from 'path'
+
+function getDefaultElectronUserDataDir() {
+  const packageJson = JSON.parse(readFileSync(path.join(__dirname, '../../../package.json'), 'utf-8'))
+  const appName = packageJson.name || 'onechat'
+
+  if (process.platform === 'win32') {
+    return path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), appName)
+  }
+
+  if (process.platform === 'darwin') {
+    return path.join(os.homedir(), 'Library', 'Application Support', appName)
+  }
+
+  return path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config'), appName)
+}
 
 function createElectronEnv() {
   const env = { ...process.env }
   delete env.ELECTRON_RUN_AS_NODE
+  env.ONECHAT_USER_DATA_DIR = env.ONECHAT_USER_DATA_DIR || getDefaultElectronUserDataDir()
   return env
 }
 

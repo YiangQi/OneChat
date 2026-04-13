@@ -92,6 +92,87 @@ function onInputTextSended() {
     }
 }
 
+function _isElementVisible(element) {
+    if (!element) {
+        return false;
+    }
+    const style = window.getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    return style.display !== 'none'
+        && style.visibility !== 'hidden'
+        && style.opacity !== '0'
+        && rect.width > 0
+        && rect.height > 0;
+}
+
+function _queryFirst(selectors) {
+    for (const selector of selectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+            return element;
+        }
+    }
+    return null;
+}
+
+function _findClickableByText(patterns) {
+    const candidates = document.querySelectorAll('button, [role="button"], a, div, span');
+    for (const candidate of candidates) {
+        if (!_isElementVisible(candidate)) {
+            continue;
+        }
+
+        const label = [
+            candidate.getAttribute('aria-label'),
+            candidate.getAttribute('title'),
+            candidate.textContent
+        ].filter(Boolean).join(' ').trim();
+
+        if (patterns.some(pattern => pattern.test(label))) {
+            return candidate.closest('button, [role="button"], a') || candidate;
+        }
+    }
+    return null;
+}
+
+function _clickElement(element) {
+    if (!element) {
+        return false;
+    }
+    element.click();
+    return true;
+}
+
+function _getChatglmSidebar() {
+    return document.querySelector('aside.aside-container');
+}
+
+function _isChatglmSidebarCollapsed() {
+    const sidebar = _getChatglmSidebar();
+    if (!sidebar) {
+        return null;
+    }
+    return sidebar.classList.contains('collapse-aside') || sidebar.getBoundingClientRect().width <= 80;
+}
+
+function _getChatglmSidebarToggleButton() {
+    const sidebar = _getChatglmSidebar();
+    if (!sidebar) {
+        return null;
+    }
+
+    const buttons = sidebar.querySelectorAll('.btn-area .operation-btn');
+    const collapsed = _isChatglmSidebarCollapsed();
+
+    if (collapsed === true) {
+        return buttons[0] || null;
+    }
+
+    // In the expanded layout, the first operation button opens history/search;
+    // the second one collapses the left sidebar.
+    return buttons[1] || null;
+}
+
 /**
  * When the client-side inputbox button in the toolbar clicks, this event will be triggered.
  * You can set the visibility of the inputbox in this event to ensure it remains consistent with the client-side button state. 
@@ -118,24 +199,50 @@ function onInputBoxVisibleChanged(visible) {
  * @returns whether changing the visibility of sidebar success.
  */
 function onSidebarVisibleChanged(visible) {
-    const btnArea = document.querySelector('div[class="btn-area"]');
+    const collapsed = _isChatglmSidebarCollapsed();
+    if (collapsed !== null) {
+        if ((visible && !collapsed) || (!visible && collapsed)) {
+            return true;
+        }
 
-    if (!btnArea || btnArea.children.length < 1) {
-        return false;
+        return _clickElement(_getChatglmSidebarToggleButton());
     }
-    const expandBtn = btnArea.children[0];
-    const svg = expandBtn.querySelector('svg');
-    if (visible) {
-        if (!svg.classList.contains("expand-icon")) {
-            expandBtn.click();
-        }
-        return true;
-    } else {
-        if (svg.classList.contains("expand-icon")) {
-            expandBtn.click();
-        }
+
+    const sidebar = _queryFirst([
+        'aside',
+        'nav[class*="sidebar"]',
+        'div[class*="sidebar"]',
+        'div[class*="side-bar"]',
+        'div[class*="sider"]',
+        'div[class*="history"]'
+    ]);
+    const sidebarVisible = _isElementVisible(sidebar);
+
+    if (visible === sidebarVisible) {
         return true;
     }
+
+    const toggleButton = _queryFirst([
+        'button[aria-label*="侧边栏"]',
+        'button[aria-label*="sidebar" i]',
+        'button[title*="侧边栏"]',
+        'button[title*="sidebar" i]',
+        '[role="button"][aria-label*="侧边栏"]',
+        '[role="button"][aria-label*="sidebar" i]',
+        '[class*="sidebar"][role="button"]',
+        '[class*="side-bar"][role="button"]',
+        '[class*="collapse"][role="button"]',
+        '[class*="expand"][role="button"]'
+    ]) || _findClickableByText([
+        /侧边栏/,
+        /收起/,
+        /展开/,
+        /sidebar/i,
+        /collapse/i,
+        /expand/i
+    ]);
+
+    return _clickElement(toggleButton);
 }
 
 /**
@@ -233,10 +340,29 @@ function onAppLanguageChanged(language) {
  * You can implement this event handler to ensure new chat is opened.
  */
 function onNewChatButtonClicked() {
-    const button = document.querySelector('div[class*="create-session"]');
-    if (button) {
-        button.click();
-    }
+    const button = _queryFirst([
+        '.new-session',
+        '.new-session-collapse',
+        'div[class*="create-session"]',
+        'button[class*="create-session"]',
+        '[role="button"][class*="create-session"]',
+        'button[aria-label*="新建"]',
+        'button[aria-label*="对话"]',
+        'button[aria-label*="chat" i]',
+        'button[title*="新建"]',
+        'button[title*="对话"]',
+        'button[title*="chat" i]',
+        '[role="button"][aria-label*="新建"]',
+        '[role="button"][title*="新建"]'
+    ]) || _findClickableByText([
+        /新建/,
+        /新对话/,
+        /开启新/,
+        /new chat/i,
+        /new conversation/i
+    ]);
+
+    _clickElement(button);
 }
 
 /**

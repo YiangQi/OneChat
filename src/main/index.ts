@@ -8,6 +8,19 @@ import { extname } from 'path'
 
 let mainWindow: ReturnType<typeof createMainWindow> | null = null
 
+function configureUserDataPath() {
+  const userDataDir = process.env.ONECHAT_USER_DATA_DIR
+  if (!userDataDir) {
+    return
+  }
+
+  const resolvedUserDataDir = resolve(userDataDir)
+  app.setPath('userData', resolvedUserDataDir)
+  console.log(`[OneChat] Using custom userData path: ${resolvedUserDataDir}`)
+}
+
+configureUserDataPath()
+
 /**
  * Register custom protocol for online resources
  * This allows the renderer process to access files in the online directory

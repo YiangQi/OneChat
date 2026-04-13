@@ -62,6 +62,19 @@ Currently supported models include:
 
 OneChat also supports adding other large-model websites dynamically; after modifying the `online.json` configuration, restart the application for the changes to take effect.
 
+## Development Login State
+
+E2E launches default to the same Electron `userData` profile used by `npm run dev`, so website cookies and local storage can be reused after you log in during development.
+
+To override the profile for debugging, set `ONECHAT_USER_DATA_DIR`:
+
+```powershell
+$env:ONECHAT_USER_DATA_DIR="D:\study\personal\OneChat\.electron-user-data"
+npm run dev
+```
+
+Run E2E or diagnostic scripts with the same environment variable when you want them to use that custom profile.
+
 ## How to Add a New Model Site
 
 - Create a new model directory under the `online` folder, using the format `{provider}_{model}`, for example `openai_chatgpt`. The directory name format is not strictly required, but it keeps things consistent.
