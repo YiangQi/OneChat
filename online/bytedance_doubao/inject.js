@@ -70,15 +70,23 @@ function onUrlChanged(args) {
  * @param {*} text: all the text in the client-side input box.
  */
 function onInputTextChanged(text) {
-    const inputElement = document.querySelector('textarea[data-testid="chat_input_input"]')
+    console.log('[Doubao] onInputTextChanged called:', text);
+    const inputElement = document.querySelector('textarea.semi-input-textarea')
     if (inputElement) {
+        inputElement.focus();
+
         const nativeTextareaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
         nativeTextareaSetter.call(inputElement, text);
+
         const inputEvent = new InputEvent('input', {
             bubbles: true,
             cancelable: true,
         });
         inputElement.dispatchEvent(inputEvent);
+
+        // 触发 change 事件以确保值被正确设置
+        const changeEvent = new Event('change', { bubbles: true });
+        inputElement.dispatchEvent(changeEvent);
     }
 }
 
@@ -87,31 +95,65 @@ function onInputTextChanged(text) {
  * You must implement this event handler to ensure the input field content can be properly submitted when the client-side send button is clicked.
  */
 function onInputTextSended() {
-    const btn = document.querySelector('button[data-testid="chat_input_send_button"]');
-    if (btn) {
-        btn.click();
+    console.log('[Doubao] onInputTextSended called');
+    const inputElement = document.querySelector('textarea.semi-input-textarea');
+    if (inputElement) {
+        // Doubao 使用 Enter 键发送消息
+        const enterEvent = new KeyboardEvent('keydown', {
+            key: 'Enter',
+            code: 'Enter',
+            keyCode: 13,
+            which: 13,
+            bubbles: true,
+            cancelable: true
+        });
+        inputElement.dispatchEvent(enterEvent);
     }
 }
 
 
 /**
  * When the client-side inputbox button in the toolbar clicks, this event will be triggered.
- * You can set the visibility of the inputbox in this event to ensure it remains consistent with the client-side button state. 
+ * You can set the visibility of the inputbox in this event to ensure it remains consistent with the client-side button state.
  * @param {*} visible: Whether the inputbox is visible
  * @returns whether changing the visibility of sidebar success.
  */
 function onInputBoxVisibleChanged(visible) {
-    const inputBoxElement = document.querySelector('div[data-testid="chat_input"]');
-    if (inputBoxElement) {
-        inputBoxElement.style.display = visible ? 'block' : 'none';
-        const innnerDom = inputBoxElement.closest('div[class*="inner"]');
-        if (innnerDom) {
-            const divDom = innnerDom.closest('div[class*="container"]');
-            if (divDom) {
-                divDom.style.display = visible ? 'block' : 'none';
+    console.log('[Doubao] onInputBoxVisibleChanged called, visible:', visible);
+
+    // 查找输入框的最外层容器
+    // 根据调试结果，顶层容器是 level 8，包含 "input-guidance-input-container-min-height" 类名
+    const textarea = document.querySelector('textarea.semi-input-textarea');
+    if (textarea) {
+        // 向上查找包含 "input-guidance-input-container" 的容器
+        let container = textarea.parentElement;
+        let level = 0;
+        while (container && level < 15) {
+            const className = container.className || '';
+            // 查找包含 input-guidance-input-container 的容器
+            if (className.includes('input-guidance-input-container')) {
+                console.log('[Doubao] Found input container at level', level);
+                container.style.display = visible ? '' : 'none';
+                console.log('[Doubao] Input container display set to:', container.style.display);
+                return true;
             }
+            container = container.parentElement;
+            level++;
         }
-        return true;
+
+        // 如果没找到，尝试查找包含 "input" 和 "container" 的容器
+        container = textarea.parentElement;
+        level = 0;
+        while (container && level < 15) {
+            const className = container.className || '';
+            if (className.includes('input') && className.includes('container')) {
+                console.log('[Doubao] Found alternative input container at level', level);
+                container.style.display = visible ? '' : 'none';
+                return true;
+            }
+            container = container.parentElement;
+            level++;
+        }
     }
     return false;
 }
@@ -123,21 +165,41 @@ function onInputBoxVisibleChanged(visible) {
  * @returns whether changing the visibility of sidebar is success.
  */
 function onSidebarVisibleChanged(visible) {
-    const openBtn = document.querySelector('div[data-testid="siderbar_closed_status_btn"]');
-    const closeBtn = document.querySelector('div[data-testid="siderbar_close_btn"]');
-    if (!openBtn && !closeBtn) {
+    console.log('[Doubao] onSidebarVisibleChanged called, visible:', visible);
+
+    // Doubao 使用 CSS 类来控制侧边栏状态
+    // 查找 nav 元素，类名格式: left-side-U7A0kz left-side__expand-OIQFEm
+    const navElement = document.querySelector('nav[class*="left-side"]');
+    if (!navElement) {
+        console.log('[Doubao] Nav element not found');
         return false;
     }
-    if (visible) {
-        if (openBtn) {
-            openBtn.click();
-        }
+
+    const className = navElement.className;
+    // 检查当前状态: left-side__expand 表示展开，left-side__collapse 表示收起
+    const isExpanded = className.includes('left-side__expand');
+    const isCollapsed = className.includes('left-side__collapse');
+
+    console.log('[Doubao] Current nav state - expanded:', isExpanded, 'collapsed:', isCollapsed);
+
+    // 如果状态已经匹配，直接返回
+    if ((visible && isExpanded) || (!visible && isCollapsed)) {
+        console.log('[Doubao] Sidebar already in target state');
         return true;
-    } else {
-        if (closeBtn) {
-            closeBtn.click();
-        }
     }
+
+    // 通过修改类名来切换状态
+    // 类名格式: left-side-{随机字符} left-side__{expand|collapse}-{随机字符}
+    if (visible) {
+        // 将 collapse 改为 expand，使用正则确保正确替换
+        navElement.className = className.replace(/left-side__collapse-[A-Za-z0-9]+/, 'left-side__expand-OIQFEm');
+        console.log('[Doubao] Changed to expanded state, new className:', navElement.className);
+    } else {
+        // 将 expand 改为 collapse
+        navElement.className = className.replace(/left-side__expand-[A-Za-z0-9]+/, 'left-side__collapse-OIQFEm');
+        console.log('[Doubao] Changed to collapsed state, new className:', navElement.className);
+    }
+
     return true;
 }
 
@@ -219,16 +281,53 @@ function _isInputBoxVisible() {
 
 /**
  * When clicking on a sidebar conversation, this method will be invoked.
- * You must implement this method to ensure proper switching of conversations 
+ * You must implement this method to ensure proper switching of conversations
  * within the page when clicking on sidebar conversations.
- * @param {*} conversationId 
+ * @param {*} conversationId
+ * @param {*} conversationTitle
  */
-function onConversationClicked(conversationId) {
-    id = `conversation_${conversationId}`;
-    const a = document.querySelector(`a[id=${id}]`);
-    if (a) {
-        a.click();
+function onConversationClicked(conversationId, conversationTitle) {
+    console.log('[Doubao] onConversationClicked called:', { conversationId, conversationTitle });
+
+    // Doubao 的会话链接格式: /chat/{id}
+    // 首先尝试通过 href 查找
+    const sidebar = document.querySelector('#flow_chat_sidebar');
+    if (sidebar) {
+        // 查找所有链接
+        const allLinks = sidebar.querySelectorAll('a[href*="/chat/"]');
+        console.log(`[Doubao] Found ${allLinks.length} chat links`);
+
+        for (let i = 0; i < allLinks.length; i++) {
+            const link = allLinks[i];
+            const href = link.getAttribute('href') || '';
+
+            // 检查 href 是否包含 conversationId
+            if (href.includes(conversationId) || href === `/chat/${conversationId}`) {
+                console.log('[Doubao] Found matching conversation link, clicking:', href);
+                link.click();
+                return;
+            }
+        }
+
+        // 如果通过 ID 没找到，尝试通过标题查找
+        if (conversationTitle) {
+            console.log('[Doubao] Trying to find by title:', conversationTitle);
+            for (let i = 0; i < allLinks.length; i++) {
+                const link = allLinks[i];
+                const text = (link.textContent || '').trim();
+
+                if (text === conversationTitle || text.includes(conversationTitle)) {
+                    console.log('[Doubao] Found conversation by title, clicking');
+                    link.click();
+                    return;
+                }
+            }
+        }
     }
+
+    // 如果没找到链接，尝试直接导航
+    console.log('[Doubao] No link found, navigating to:', `/chat/${conversationId}`);
+    window.location.href = `/chat/${conversationId}`;
 }
 
 /**
@@ -274,15 +373,44 @@ function onAppLanguageChanged(language) {
  * You can implement this event handler to ensure new chat is opened.
  */
 function onNewChatButtonClicked() {
-    const newChatBtn = document.querySelector('button[data-testid="create_conversation_button"]');
-    if (newChatBtn) {
-        newChatBtn.click();
-    } else {
-        const divBtn = document.querySelector('div[data-testid="create_conversation_button"] svg').closest('div');
-        if (divBtn) {
-            divBtn.click();
+    console.log('[Doubao] onNewChatButtonClicked called');
+
+    // 根据调试结果，"新对话" 是侧边栏的第二个子元素（index 1）
+    // 它是一个 DIV，包含 "cursor-pointer" 类
+    const sidebar = document.querySelector('#flow_chat_sidebar');
+    if (sidebar && sidebar.children.length > 1) {
+        const secondChild = sidebar.children[1];
+        const text = (secondChild.textContent || '').trim();
+
+        // 验证这是 "新对话" 元素
+        if (text === '新对话' || secondChild.className.includes('cursor-pointer')) {
+            console.log('[Doubao] Clicking new chat button');
+            secondChild.click();
+            return;
         }
     }
+
+    // 如果没找到，尝试查找包含 "新对话" 文字的元素
+    if (sidebar) {
+        const allElements = sidebar.querySelectorAll('*');
+        for (let i = 0; i < allElements.length; i++) {
+            const el = allElements[i];
+            const text = (el.textContent || '').trim();
+
+            if (text === '新对话') {
+                const clickable = el.closest('div[onclick], div.cursor-pointer, a, button, [role="button]');
+                if (clickable) {
+                    console.log('[Doubao] Clicking new chat element by text');
+                    clickable.click();
+                    return;
+                }
+            }
+        }
+    }
+
+    // 如果仍然没找到，尝试导航到根 URL
+    console.log('[Doubao] No new chat button found, navigating to /chat/');
+    window.location.href = '/chat/';
 }
 
 /**
