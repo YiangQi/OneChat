@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
    * @param scriptPath - Relative script path, e.g. common_inject.js or openai_chatgpt/inject.js
    */
   readOnlineScript: (scriptPath: string) => ipcRenderer.invoke(IPC_CHANNELS.ONLINE_READ_SCRIPT, scriptPath),
+  getWebviewPreloadPath: (scriptPath?: string) => ipcRenderer.invoke(IPC_CHANNELS.WEBVIEW_PRELOAD_GET_PATH, scriptPath),
 
   /**
    * Creates a new independent window
@@ -89,6 +90,7 @@ declare global {
     electronAPI: {
       readOnlineConfig: () => Promise<OnlineConfigResult>
       readOnlineScript: (scriptPath: string) => Promise<string | null>
+      getWebviewPreloadPath: (scriptPath?: string) => Promise<string>
       createIndependentWindow: (tabData: any, bounds?: { x: number; y: number; width: number; height: number }) => void
       closeAllWindows: () => void
       getSystemTheme: () => Promise<string>

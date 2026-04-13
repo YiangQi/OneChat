@@ -3,10 +3,11 @@ import { createMainWindow, closeAllWindows, createIndependentWindow, registerWin
 import { readOnlineConfig } from './config'
 import { IPC_CHANNELS } from '../shared/constants'
 import { join, resolve, relative } from 'path'
-import { readFile } from 'fs/promises'
+import { mkdir, readFile, writeFile } from 'fs/promises'
 import { extname } from 'path'
 
 let mainWindow: ReturnType<typeof createMainWindow> | null = null
+const COMMON_INJECT_SCRIPT = 'common_inject.js'
 
 function configureUserDataPath() {
   const userDataDir = process.env.ONECHAT_USER_DATA_DIR
@@ -65,6 +66,118 @@ function registerOnlineProtocol() {
   })
 }
 
+function getOnlineBasePath() {
+  return app.isPackaged ? join(process.resourcesPath, 'online') : join(process.cwd(), 'online')
+}
+
+function resolveOnlineScriptPath(scriptPath: string) {
+  if (typeof scriptPath !== 'string' || !scriptPath.endsWith('.js')) {
+    console.warn('[OnlineScript] Invalid script path:', scriptPath)
+    return null
+  }
+
+  const resolvedBase = resolve(getOnlineBasePath())
+  const resolvedScript = resolve(resolvedBase, scriptPath)
+  const relativePath = relative(resolvedBase, resolvedScript)
+
+  if (relativePath.startsWith('..') || relativePath.includes(':')) {
+    console.warn('[OnlineScript] Refused script outside online directory:', scriptPath)
+    return null
+  }
+
+  return resolvedScript
+}
+
+function createCallBridgeBootstrapSource() {
+  return `
+(() => {
+  const stateKey = "__ONECHAT_INJECTION__";
+  const state = window[stateKey] || (window[stateKey] = {
+    bridgeReady: false,
+    providerInjected: false,
+    commonInjected: false,
+    loadEndedDispatched: false,
+    lastUrlChanged: "",
+    invokeEvents: []
+  });
+
+  if (state.bridgeReady && window.CallBridge) return;
+
+  const listeners = Object.create(null);
+  window.CallBridge = {
+    addEventListener(name, handler) {
+      if (typeof name !== "string" || typeof handler !== "function") return false;
+      const bucket = listeners[name] || (listeners[name] = []);
+      if (!bucket.includes(handler)) bucket.push(handler);
+      return true;
+    },
+    dispatchEvent(name, ...args) {
+      const bucket = listeners[name];
+      if (!bucket || bucket.length === 0) return 0;
+      let handled = 0;
+      for (const handler of [...bucket]) {
+        try {
+          handler(...args);
+          handled += 1;
+        } catch (error) {
+          console.error("[OneChat CallBridge] listener failed", name, error);
+        }
+      }
+      return handled;
+    },
+    invoke(name, ...args) {
+      state.invokeEvents.push({ name, args, timestamp: Date.now() });
+      if (state.invokeEvents.length > 100) state.invokeEvents.shift();
+      return true;
+    },
+    getInvokedEvents() {
+      return state.invokeEvents.slice();
+    },
+    clearInvokedEvents() {
+      const events = state.invokeEvents.slice();
+      state.invokeEvents.length = 0;
+      return events;
+    }
+  };
+  state.bridgeReady = true;
+})();
+`
+}
+
+async function createWebviewPreload(scriptPath: string | undefined) {
+  const commonPath = resolveOnlineScriptPath(COMMON_INJECT_SCRIPT)
+  const providerPath = scriptPath ? resolveOnlineScriptPath(scriptPath) : null
+  if (!commonPath) return ''
+
+  const providerSource = providerPath ? await readFile(providerPath, 'utf-8') : ''
+  const commonSource = await readFile(commonPath, 'utf-8')
+  const pageWorldSource = [
+    createCallBridgeBootstrapSource(),
+    providerSource,
+    commonSource,
+    `
+(() => {
+  const state = window.__ONECHAT_INJECTION__ || (window.__ONECHAT_INJECTION__ = {});
+  state.providerInjected = ${providerPath ? 'true' : 'false'};
+  state.providerScript = ${JSON.stringify(scriptPath || '')};
+  state.commonInjected = true;
+  state.commonScript = ${JSON.stringify(COMMON_INJECT_SCRIPT)};
+})();
+`
+  ].join('\n;\n')
+  const preloadSource = [
+    "const { webFrame } = require('electron')",
+    `webFrame.executeJavaScript(${JSON.stringify(pageWorldSource)})`
+  ].join('\n')
+
+  const outputDir = join(app.getPath('userData'), 'webview-preloads')
+  await mkdir(outputDir, { recursive: true })
+  const safeName = (scriptPath || 'common').replace(/[^a-z0-9_.-]+/gi, '_')
+  const outputPath = join(outputDir, `${safeName}.js`)
+  await writeFile(outputPath, preloadSource, 'utf-8')
+  return outputPath
+}
+
 /**
  * Register IPC handlers for communication with renderer process
  */
@@ -90,20 +203,22 @@ function registerIpcHandlers() {
     }
 
     try {
-      const basePath = app.isPackaged ? join(process.resourcesPath, 'online') : join(process.cwd(), 'online')
-      const resolvedBase = resolve(basePath)
-      const resolvedScript = resolve(resolvedBase, scriptPath)
-      const relativePath = relative(resolvedBase, resolvedScript)
-
-      if (relativePath.startsWith('..') || relativePath.includes(':')) {
-        console.warn('[OnlineScript] Refused script outside online directory:', scriptPath)
-        return null
-      }
+      const resolvedScript = resolveOnlineScriptPath(scriptPath)
+      if (!resolvedScript) return null
 
       return await readFile(resolvedScript, 'utf-8')
     } catch (error) {
       console.warn('[OnlineScript] Failed to read script:', scriptPath, error)
       return null
+    }
+  })
+
+  ipcMain.handle(IPC_CHANNELS.WEBVIEW_PRELOAD_GET_PATH, async (_event, scriptPath?: string) => {
+    try {
+      return await createWebviewPreload(scriptPath)
+    } catch (error) {
+      console.warn('[WebViewPreload] Failed to create preload:', scriptPath, error)
+      return ''
     }
   })
 

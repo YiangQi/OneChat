@@ -42,8 +42,10 @@ function mountContainer(customModel = model) {
 }
 
 async function prepareWebview(wrapper: ReturnType<typeof mountContainer>) {
+  await flushPromises()
   vi.advanceTimersByTime(120)
   await wrapper.vm.$nextTick()
+  await flushPromises()
 
   const element = wrapper.find('webview').element as unknown as Electron.WebviewTag & {
     executeJavaScript: ReturnType<typeof vi.fn>
@@ -146,4 +148,52 @@ describe('WebViewContainer injection', () => {
 
     expect(webview.executeJavaScript).toHaveBeenCalledTimes(3)
   })
+
+  it('stores browser conversation events', async () => {
+    const wrapper = mountContainer()
+    const webview = await prepareWebview(wrapper)
+    const conversationsStore = (await import('@/stores/conversations')).useConversationsStore()
+
+    webview.executeJavaScript.mockImplementation(async (script: string) => {
+      if (script === 'read-invoke-events') {
+        return [
+          { name: 'webConversationListUpdated', args: [[{ id: 'c1', title: 'First chat' }]], timestamp: 1 },
+          { name: 'webConversationChanged', args: ['c1'], timestamp: 2 }
+        ]
+      }
+      return true
+    })
+
+    await triggerAndFlush(wrapper, 'dom-ready')
+    await triggerAndFlush(wrapper, 'did-finish-load')
+
+    expect(conversationsStore.byModelId.chatgpt.conversations).toEqual([{ id: 'c1', title: 'First chat' }])
+    expect(conversationsStore.byModelId.chatgpt.activeConversationId).toBe('c1')
+  })
+
+  it('polls delayed browser conversation events after injection', async () => {
+    const wrapper = mountContainer()
+    const webview = await prepareWebview(wrapper)
+    const conversationsStore = (await import('@/stores/conversations')).useConversationsStore()
+    let shouldReturnEvents = false
+
+    webview.executeJavaScript.mockImplementation(async (script: string) => {
+      if (script === 'read-invoke-events') {
+        if (!shouldReturnEvents) return []
+        shouldReturnEvents = false
+        return [
+          { name: 'webConversationListUpdated', args: [[{ id: 'late-1', title: 'Late chat' }]], timestamp: 1 }
+        ]
+      }
+      return true
+    })
+
+    await triggerAndFlush(wrapper, 'dom-ready')
+    shouldReturnEvents = true
+    vi.advanceTimersByTime(1000)
+    await flushPromises()
+
+    expect(conversationsStore.byModelId.chatgpt.conversations).toEqual([{ id: 'late-1', title: 'Late chat' }])
+  })
+
 })

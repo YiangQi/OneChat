@@ -17,6 +17,7 @@ export interface WebviewEvents {
   // Action events
   loginButtonClicked: () => void
   chatNewButtonClicked: () => void
+  conversationClicked: (conversationId: string, conversationTitle: string) => void
 
   // Attachment events
   addImageButtonClicked: (payload: FilePayload) => void
@@ -139,6 +140,10 @@ export function useWebviewDispatch() {
     return dispatchToTargets('chatNewButtonClicked')
   }
 
+  function dispatchConversationClicked(tabId: string, conversationId: string, conversationTitle: string): boolean {
+    return dispatchToTab(tabId, 'conversationClicked', conversationId, conversationTitle)
+  }
+
   /**
    * Attachment events
    */
@@ -170,6 +175,7 @@ export function useWebviewDispatch() {
     // Action events
     dispatchLoginButtonClicked,
     dispatchChatNewButtonClicked,
+    dispatchConversationClicked,
 
     // Attachment events
     dispatchAddImageButtonClicked,

@@ -134,6 +134,76 @@ test.describe('ChatGLM injection (E2E)', () => {
     expect(clicks).toBe(1)
   })
 
+  test('expands collapsed ChatGLM sidebar before clicking a conversation', async () => {
+    const result = await runInInjectedFrame<{
+      expanded: boolean
+      clickedTitle: string
+      conversationChangedCalls: number
+    }>(
+      mainWindow,
+      `
+        <style>
+          .aside-container {
+            width: 40px;
+            height: 400px;
+          }
+          .aside-container:not(.collapse-aside) {
+            width: 260px;
+          }
+          .aside-container.collapse-aside .history-list {
+            display: none;
+          }
+        </style>
+        <aside class="el-aside aside-container scroll-display-none collapse-aside">
+          <div class="btn-area">
+            <div
+              class="operation-btn"
+              onclick="document.querySelector('.aside-container').classList.remove('collapse-aside')"
+            >
+              expand
+            </div>
+          </div>
+          <div class="history-list">
+            <div
+              class="history-item"
+              data-conversation-id="conversation-1"
+              onclick="window.__clickedTitle = this.querySelector('.title').innerText"
+            >
+              <div class="title">
+                First conversation
+              </div>
+            </div>
+          </div>
+        </aside>
+      `,
+      `
+        (async () => {
+          const calls = [];
+          const originalInvoke = CallBridge.invoke.bind(CallBridge);
+          CallBridge.invoke = (name, ...args) => {
+            calls.push({ name, args });
+            return originalInvoke(name, ...args);
+          };
+
+          CallBridge.dispatchEvent('conversationClicked', 'conversation-1', 'First conversation');
+          await new Promise(resolve => setTimeout(resolve, 900));
+
+          return {
+            expanded: !document.querySelector('.aside-container').classList.contains('collapse-aside'),
+            clickedTitle: window.__clickedTitle || '',
+            conversationChangedCalls: calls.filter(call => call.name === 'webConversationChanged').length
+          };
+        })();
+      `
+    )
+
+    expect(result).toEqual({
+      expanded: true,
+      clickedTitle: 'First conversation',
+      conversationChangedCalls: 0
+    })
+  })
+
   test('keeps generic sidebar fallback for non-ChatGLM-like pages', async () => {
     const result = await runInInjectedFrame<{ hidden: boolean; visibleAgain: boolean }>(
       mainWindow,

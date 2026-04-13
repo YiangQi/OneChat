@@ -40,6 +40,10 @@ function onLoadEnded(args) {
  */
 function onUrlChanged(args) {
     console.log(`onUrlChanged: ${JSON.stringify(args)} ready: ${document.readyState}`);
+    const currentId = _getCurrentConversationIdFromUrl();
+    if (currentId) {
+        invokeBrowserMethod("webConversationChanged", currentId);
+    }
     let maxCnt = 10;
     const timerId = setInterval(() => {
         if (maxCnt-- < 0) {
@@ -297,15 +301,49 @@ function onAddFileButtonClicked(fileInfo) {
  * @param {*} conversationTitle
  */
 function onConversationClicked(conversationId, conversationTitle) {
-    const list = document.querySelectorAll('div[class="history-list"] div[class="title"]');
-    if (list.length == 0) {
+    const switchConversation = () => _clickChatglmConversation(conversationId, conversationTitle);
+
+    if (_isChatglmSidebarCollapsed() === true) {
+        onSidebarVisibleChanged(true);
+        setTimeout(switchConversation, 300);
+        setTimeout(switchConversation, 800);
         return;
     }
-    for (let child of list) {
-        if(conversationTitle === child.innerText) {
-            child.click();
+
+    switchConversation();
+}
+
+function _clickChatglmConversation(conversationId, conversationTitle) {
+    const targetId = String(conversationId || '');
+    const targetTitle = String(conversationTitle || '').trim();
+    const escapedId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(targetId) : targetId;
+    const selectors = [
+        `[data-id="${escapedId}"]`,
+        `[data-conversation-id="${escapedId}"]`,
+        `[href*="${escapedId}"]`,
+        'div[class="history-list"] div[class="title"]',
+        '.history-list [class*="item"]',
+        '.history-list .title'
+    ];
+
+    for (const selector of selectors) {
+        const list = document.querySelectorAll(selector);
+        for (let child of list) {
+            const label = (child.innerText || child.textContent || '').trim();
+            const idMatched = targetId && (
+                child.getAttribute('data-id') === targetId
+                || child.getAttribute('data-conversation-id') === targetId
+                || (child.getAttribute('href') || '').includes(targetId)
+            );
+
+            if (idMatched || (targetTitle && label === targetTitle)) {
+                (child.closest('a, button, [role="button"], [class*="item"]') || child).click();
+                return true;
+            }
         }
     }
+
+    return false;
 }
 
 /**
@@ -474,4 +512,9 @@ function _parseConversationDetail(response) {
     if (id) {
         invokeBrowserMethod("webConversationChanged", id);
     }
+}
+
+function _getCurrentConversationIdFromUrl() {
+    const match = location.href.match(/(?:conversation|chat|session)[=/]([^/?#&]+)/i);
+    return match ? decodeURIComponent(match[1]) : '';
 }

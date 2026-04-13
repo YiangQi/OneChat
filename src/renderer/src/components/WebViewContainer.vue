@@ -12,6 +12,7 @@
       ref="webviewRef"
       :src="model.url"
       :partition="`persist:${model.id}`"
+      :preload="webviewPreloadPath"
       class="webview"
       :data-tab-id="tabId"
       @did-start-loading="handleStartLoading"
@@ -30,6 +31,7 @@ import type { AIModel } from '@shared/types'
 import { usePanelStore } from '@/stores/panel'
 import { useComposerStore } from '@/stores/composer'
 import { useThemeStore } from '@/stores/theme'
+import { useConversationsStore } from '@/stores/conversations'
 import {
   createCallBridgeBootstrapScript,
   createCallBridgeDispatchScript,
@@ -56,7 +58,9 @@ const props = defineProps<{
 const panelStore = usePanelStore()
 const composerStore = useComposerStore()
 const themeStore = useThemeStore()
+const conversationsStore = useConversationsStore()
 const hasLoaded = ref(false)
+const webviewPreloadPath = ref('')
 const isDestroyed = ref(false)
 const webviewRef = ref<Electron.WebviewTag>()
 const isInjected = ref(false)
@@ -64,6 +68,8 @@ const isInjecting = ref(false)
 const loadEndedSynced = ref(false)
 const lastUrlChanged = ref('')
 let injectionPromise: Promise<boolean> | null = null
+let invokeDrainTimer: ReturnType<typeof window.setInterval> | null = null
+let earlyInjectionTimer: ReturnType<typeof window.setInterval> | null = null
 
 const containerStyle = computed(() => ({
   left: `${props.layout.left}px`,
@@ -73,20 +79,33 @@ const containerStyle = computed(() => ({
 }))
 
 // Create each webview once, then only move/resize the wrapper to avoid reloads.
-watch(() => props.layout.visible, (newVal) => {
+watch([() => props.layout.visible, webviewPreloadPath], ([newVal]) => {
   if (isDestroyed.value) return
 
-  if (newVal && !hasLoaded.value) {
+  if (newVal && webviewPreloadPath.value && !hasLoaded.value) {
     setTimeout(() => {
-      if (!isDestroyed.value) {
+      if (!isDestroyed.value && webviewPreloadPath.value) {
         hasLoaded.value = true
       }
     }, 100)
   }
 }, { immediate: true })
 
+void window.electronAPI.getWebviewPreloadPath(props.model.script)
+  .then((path) => {
+    if (!isDestroyed.value) {
+      webviewPreloadPath.value = path
+    }
+  })
+  .catch((error) => {
+    console.warn('[WebView] Failed to resolve webview preload path:', error)
+  })
+
 onUnmounted(() => {
   isDestroyed.value = true
+  stopEarlyInjectionRetries()
+  stopInvokeDrainPolling()
+  conversationsStore.clearModel(props.model.id)
 })
 
 function mapThemeToAdapterValue() {
@@ -146,6 +165,7 @@ async function injectScripts() {
     }
 
     isInjected.value = true
+    startInvokeDrainPolling()
     return true
   } catch (error) {
     console.error('[WebView] Injection failed:', props.model.name, error)
@@ -196,6 +216,20 @@ async function drainBrowserInvokeEvents() {
     for (const event of events) {
       if (event.name === 'webLoadEnded') {
         loadEndedSynced.value = true
+      } else if (event.name === 'webConversationListUpdated') {
+        const [conversations] = event.args
+        if (!Array.isArray(conversations)) {
+          console.warn('[WebView] Invalid conversation list event:', props.model.name, event.args)
+          continue
+        }
+        conversationsStore.setConversations(props.model.id, conversations)
+      } else if (event.name === 'webConversationChanged') {
+        const [conversationId] = event.args
+        if (conversationId != null && typeof conversationId !== 'string') {
+          console.warn('[WebView] Invalid conversation changed event:', props.model.name, event.args)
+          continue
+        }
+        conversationsStore.setActiveConversation(props.model.id, conversationId ?? '')
       }
       console.debug('[WebView] Browser method invoked:', props.model.name, event.name, event.args)
     }
@@ -207,12 +241,51 @@ async function drainBrowserInvokeEvents() {
 async function handleDomReady() {
   console.log('[WebView] DOM ready:', props.model.name)
   await ensureInjected()
+  stopEarlyInjectionRetries()
+}
+
+function startEarlyInjectionRetries() {
+  stopEarlyInjectionRetries()
+
+  let attempts = 0
+  earlyInjectionTimer = window.setInterval(() => {
+    attempts += 1
+    if (isDestroyed.value || isInjected.value || attempts > 20) {
+      stopEarlyInjectionRetries()
+      return
+    }
+
+    void ensureInjected()
+  }, 100)
+}
+
+function stopEarlyInjectionRetries() {
+  if (!earlyInjectionTimer) return
+  window.clearInterval(earlyInjectionTimer)
+  earlyInjectionTimer = null
+}
+
+function startInvokeDrainPolling() {
+  if (invokeDrainTimer || isDestroyed.value) return
+
+  invokeDrainTimer = window.setInterval(() => {
+    if (isDestroyed.value || !isInjected.value) return
+    void drainBrowserInvokeEvents()
+  }, 1000)
+}
+
+function stopInvokeDrainPolling() {
+  if (!invokeDrainTimer) return
+  window.clearInterval(invokeDrainTimer)
+  invokeDrainTimer = null
 }
 
 function handleStartLoading() {
   isInjected.value = false
   loadEndedSynced.value = false
   lastUrlChanged.value = ''
+  stopInvokeDrainPolling()
+  startEarlyInjectionRetries()
 }
 
 async function handleFinishLoad() {
@@ -228,6 +301,7 @@ async function handleNavigate() {
   await ensureInjected()
   await syncUrlChanged()
 }
+
 </script>
 
 <style scoped>

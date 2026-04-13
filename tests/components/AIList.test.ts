@@ -85,4 +85,87 @@ describe('AIList Component', () => {
     const items = wrapper.findAll('.ai-item')
     expect(items.length).toBe(0)
   })
+
+  it('renders open model conversations and active state', async () => {
+    vi.mocked(window.electronAPI.readOnlineConfig).mockResolvedValue({
+      models: fixtures.mockAIModels,
+      onlineDir: '/online'
+    })
+
+    const wrapper = mount(AIList)
+    const aiModelsStore = (await import('@/stores/aiModels')).useAIModelsStore()
+    const tabsStore = (await import('@/stores/tabs')).useTabsStore()
+    const conversationsStore = (await import('@/stores/conversations')).useConversationsStore()
+
+    await aiModelsStore.loadModels()
+    tabsStore.openTab(fixtures.mockAIModels[0])
+    conversationsStore.setConversations('model-0', [
+      { id: 'c1', title: 'First chat', subTitle: 'Today' },
+      { id: 'c2', title: 'Second chat' }
+    ])
+    conversationsStore.setActiveConversation('model-0', 'c2')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.text()).toContain('First chat')
+    expect(wrapper.text()).toContain('Second chat')
+    expect(wrapper.find('.conversation-item.is-active').text()).toContain('Second chat')
+  })
+
+  it('hides conversation children after the model tab closes', async () => {
+    vi.mocked(window.electronAPI.readOnlineConfig).mockResolvedValue({
+      models: fixtures.mockAIModels,
+      onlineDir: '/online'
+    })
+
+    const wrapper = mount(AIList)
+    const aiModelsStore = (await import('@/stores/aiModels')).useAIModelsStore()
+    const tabsStore = (await import('@/stores/tabs')).useTabsStore()
+    const conversationsStore = (await import('@/stores/conversations')).useConversationsStore()
+
+    await aiModelsStore.loadModels()
+    tabsStore.openTab(fixtures.mockAIModels[0])
+    const tabId = tabsStore.tabs[0].id
+    conversationsStore.setConversations('model-0', [{ id: 'c1', title: 'First chat' }])
+    await wrapper.vm.$nextTick()
+    expect(wrapper.text()).toContain('First chat')
+
+    tabsStore.closeTab(tabId)
+    await wrapper.vm.$nextTick()
+    expect(wrapper.text()).not.toContain('First chat')
+  })
+
+  it('dispatches conversation clicks through the webview dispatch path', async () => {
+    vi.mocked(window.electronAPI.readOnlineConfig).mockResolvedValue({
+      models: fixtures.mockAIModels,
+      onlineDir: '/online'
+    })
+
+    const wrapper = mount(AIList)
+    const aiModelsStore = (await import('@/stores/aiModels')).useAIModelsStore()
+    const tabsStore = (await import('@/stores/tabs')).useTabsStore()
+    const conversationsStore = (await import('@/stores/conversations')).useConversationsStore()
+
+    await aiModelsStore.loadModels()
+    tabsStore.openTab(fixtures.mockAIModels[0])
+    const tabId = tabsStore.tabs[0].id
+    conversationsStore.setConversations('model-0', [{ id: 'c1', title: 'First chat' }])
+    await wrapper.vm.$nextTick()
+
+    const webview = document.createElement('webview') as unknown as Electron.WebviewTag & {
+      executeJavaScript: ReturnType<typeof vi.fn>
+    }
+    webview.setAttribute('data-tab-id', tabId)
+    webview.setAttribute('src', fixtures.mockAIModels[0].url)
+    webview.executeJavaScript = vi.fn(() => Promise.resolve(true))
+    document.body.appendChild(webview)
+
+    await wrapper.find('.conversation-item').trigger('click')
+
+    expect(webview.executeJavaScript).toHaveBeenCalledWith(
+      expect.stringContaining('conversationClicked'),
+      false
+    )
+
+    webview.remove()
+  })
 })

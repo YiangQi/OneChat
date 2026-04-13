@@ -2,6 +2,7 @@ export const IPC_CHANNELS = {
   // 渲染进程 → 主进程
   CONFIG_READ_ONLINE_JSON: 'config:read-online-json',
   ONLINE_READ_SCRIPT: 'online:read-script',
+  WEBVIEW_PRELOAD_GET_PATH: 'webview-preload:get-path',
   WINDOW_CREATE_INDEPENDENT: 'window:create-independent',
   WINDOW_CLOSE_ALL: 'window:close-all',
   THEME_GET_SYSTEM: 'theme:get-system',

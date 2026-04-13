@@ -5,6 +5,7 @@ import { config } from '@vue/test-utils'
 global.window.electronAPI = {
   readOnlineConfig: vi.fn(() => Promise.resolve({ models: [], onlineDir: '' })),
   readOnlineScript: vi.fn(() => Promise.resolve(null)),
+  getWebviewPreloadPath: vi.fn(() => Promise.resolve('D:\\test\\generated-webview.js')),
   createIndependentWindow: vi.fn(() => Promise.resolve({ success: true, windowId: 1 })),
   closeAllWindows: vi.fn(() => Promise.resolve({ success: true })),
   getSystemTheme: vi.fn(() => Promise.resolve('dark')),
