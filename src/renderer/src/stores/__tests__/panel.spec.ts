@@ -1,5 +1,7 @@
 import { setActivePinia, createPinia } from 'pinia'
+import { nextTick } from 'vue'
 import { usePanelStore } from '../panel'
+import { useTabsStore } from '../tabs'
 
 describe('PanelStore - 初始状态', () => {
   beforeEach(() => {
@@ -19,6 +21,58 @@ describe('PanelStore - 初始状态', () => {
 
     expect(panelStore.dragPreview.visible).toBe(false)
     expect(panelStore.dragPreview.position).toBeNull()
+  })
+})
+
+describe('PanelStore - reopen after closing dragged tabs', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+  })
+
+  it('keeps a fallback panel after the last non-default root tab is closed', async () => {
+    const panelStore = usePanelStore()
+    const tabsStore = useTabsStore()
+
+    tabsStore.openTab({
+      id: 'chatgpt',
+      name: 'ChatGPT',
+      url: 'https://chat.openai.com',
+      icon: 'chatgpt.png'
+    })
+    tabsStore.openTab({
+      id: 'claude',
+      name: 'Claude',
+      url: 'https://claude.ai',
+      icon: 'claude.png'
+    })
+    await nextTick()
+
+    const defaultPanel = panelStore.findPanel('panel-default')!
+    const firstTabId = tabsStore.tabs[0].id
+    const secondTabId = tabsStore.tabs[1].id
+    const newPanelId = panelStore.splitPanel(defaultPanel.id, 'after', 'vertical')!
+
+    panelStore.moveTabToPanel(firstTabId, defaultPanel.id, newPanelId)
+    panelStore.closeTab(defaultPanel.id, secondTabId)
+    expect(panelStore.panels[0].id).toBe(newPanelId)
+
+    panelStore.closeTab(newPanelId, firstTabId)
+    expect(panelStore.panels).toHaveLength(1)
+    expect(panelStore.flatPanels).toHaveLength(1)
+    expect(panelStore.panels[0].id).toBe('panel-default')
+
+    tabsStore.openTab({
+      id: 'doubao',
+      name: 'Doubao',
+      url: 'https://www.doubao.com',
+      icon: 'doubao.png'
+    })
+    await nextTick()
+
+    const reopenedTab = tabsStore.tabs[0]
+    const ownerPanel = panelStore.findPanelContainingTab(reopenedTab.id)
+    expect(ownerPanel?.id).toBe('panel-default')
+    expect(ownerPanel?.activeTabId).toBe(reopenedTab.id)
   })
 })
 

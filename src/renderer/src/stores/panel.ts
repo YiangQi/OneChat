@@ -243,7 +243,13 @@ export const usePanelStore = defineStore('panel', () => {
 
   function getInsertionTargetPanel(): Panel | undefined {
     const activePanel = tabsStore.activeTabId ? findPanelContainingTab(tabsStore.activeTabId) : undefined
-    return activePanel ?? findPanel('panel-default') ?? flatPanels.value[0]
+    return activePanel ?? findPanel('panel-default') ?? flatPanels.value[0] ?? resetToDefaultPanel()
+  }
+
+  function resetToDefaultPanel(): Panel {
+    const panel = createLeafPanel('panel-default')
+    panels.value = [panel]
+    return panel
   }
 
   function normalizeLeafPanel(panel: Panel) {
@@ -268,6 +274,10 @@ export const usePanelStore = defineStore('panel', () => {
       if (isRootDefault) continue
 
       closePanel(panel.id)
+    }
+
+    if (flatPanels.value.length === 0) {
+      resetToDefaultPanel()
     }
   }
 
@@ -654,6 +664,11 @@ export const usePanelStore = defineStore('panel', () => {
 
     const rootIndex = panels.value.findIndex(rootPanel => rootPanel.id === panelId)
     if (rootIndex !== -1) {
+      if (flatPanels.value.length <= 1) {
+        resetToDefaultPanel()
+        return
+      }
+
       panels.value.splice(rootIndex, 1)
     }
   }
