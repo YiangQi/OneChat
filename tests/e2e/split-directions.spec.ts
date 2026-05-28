@@ -29,7 +29,7 @@ async function splitAndReadRoot(page: Page, position: DropPosition) {
     if (!panelStore || !tabsStore || tabsStore.tabs.length < 2) return null
 
     panelStore.handleDrop(tabsStore.tabs[0].id, position, 'panel-default')
-    const parent = panelStore.panels.find((panel: any) => panel.direction)
+    const parent = panelStore.rootPanel?.direction ? panelStore.rootPanel : null
     if (!parent) return null
 
     return {
@@ -90,7 +90,7 @@ async function containerSplitAndReadRoot(page: Page, position: DropPosition) {
 
     panelStore.handleContainerDrop(tabInfo.tabId, panelStore.dragPreview.position)
 
-    const root = panelStore.panels[0]
+    const root = panelStore.rootPanel
     return {
       direction: root.direction,
       childCount: root.children?.length || 0,

@@ -117,7 +117,7 @@ watch(
   () => ({
     tabIds: tabsStore.tabs.map(tab => tab.id),
     activeTabId: tabsStore.activeTabId,
-    panels: panelStore.panels,
+    rootPanel: panelStore.rootPanel,
     panelState: panelStore.flatPanels.map(panel => ({
       id: panel.id,
       tabIds: [...panel.tabIds],

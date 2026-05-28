@@ -11,9 +11,8 @@ describe('PanelStore - 初始状态', () => {
   it('应该有一个默认面板', () => {
     const panelStore = usePanelStore()
 
-    expect(panelStore.panels).toHaveLength(1)
-    expect(panelStore.panels[0].id).toBe('panel-default')
-    expect(panelStore.panels[0].tabs).toEqual([])
+    expect(panelStore.rootPanel.id).toBe('panel-default')
+    expect(panelStore.rootPanel.tabs).toEqual([])
   })
 
   it('初始拖拽预览应该是隐藏的', () => {
@@ -54,12 +53,11 @@ describe('PanelStore - reopen after closing dragged tabs', () => {
 
     panelStore.moveTabToPanel(firstTabId, defaultPanel.id, newPanelId)
     panelStore.closeTab(defaultPanel.id, secondTabId)
-    expect(panelStore.panels[0].id).toBe(newPanelId)
+    expect(panelStore.rootPanel.id).toBe(newPanelId)
 
     panelStore.closeTab(newPanelId, firstTabId)
-    expect(panelStore.panels).toHaveLength(1)
     expect(panelStore.flatPanels).toHaveLength(1)
-    expect(panelStore.panels[0].id).toBe('panel-default')
+    expect(panelStore.rootPanel.id).toBe('panel-default')
 
     tabsStore.openTab({
       id: 'doubao',
@@ -83,12 +81,12 @@ describe('PanelStore - splitPanel', () => {
 
   it('应该将面板分成左右两个（水平分屏）', () => {
     const panelStore = usePanelStore()
-    const defaultPanelId = panelStore.panels[0].id
+    const defaultPanelId = panelStore.rootPanel.id
 
     panelStore.splitPanel(defaultPanelId, 'after', 'horizontal')
 
     // 应该创建一个父面板包含两个子面板
-    const parentPanel = panelStore.panels.find(p => p.children)
+    const parentPanel = panelStore.rootPanel.children ? panelStore.rootPanel : undefined
     expect(parentPanel).toBeDefined()
     expect(parentPanel?.direction).toBe('horizontal')
     expect(parentPanel?.children).toHaveLength(2)
@@ -96,21 +94,21 @@ describe('PanelStore - splitPanel', () => {
 
   it('新面板应该各占 50%', () => {
     const panelStore = usePanelStore()
-    const defaultPanelId = panelStore.panels[0].id
+    const defaultPanelId = panelStore.rootPanel.id
 
     panelStore.splitPanel(defaultPanelId, 'after', 'horizontal')
 
-    const parentPanel = panelStore.panels.find(p => p.children)
+    const parentPanel = panelStore.rootPanel.children ? panelStore.rootPanel : undefined
     expect(parentPanel?.sizes).toEqual([50, 50])
   })
 
   it('before 位置应该将新面板放在左边', () => {
     const panelStore = usePanelStore()
-    const defaultPanelId = panelStore.panels[0].id
+    const defaultPanelId = panelStore.rootPanel.id
 
     panelStore.splitPanel(defaultPanelId, 'before', 'horizontal')
 
-    const parentPanel = panelStore.panels.find(p => p.children)
+    const parentPanel = panelStore.rootPanel.children ? panelStore.rootPanel : undefined
     expect(parentPanel?.children?.[0].tabs).toEqual([])
     // 原面板应该在右边
     expect(parentPanel?.children?.[1].id).toBe(defaultPanelId)
@@ -118,11 +116,11 @@ describe('PanelStore - splitPanel', () => {
 
   it('应该支持垂直分屏', () => {
     const panelStore = usePanelStore()
-    const defaultPanelId = panelStore.panels[0].id
+    const defaultPanelId = panelStore.rootPanel.id
 
     panelStore.splitPanel(defaultPanelId, 'after', 'vertical')
 
-    const parentPanel = panelStore.panels.find(p => p.children)
+    const parentPanel = panelStore.rootPanel.children ? panelStore.rootPanel : undefined
     expect(parentPanel?.direction).toBe('vertical')
     expect(parentPanel?.children).toHaveLength(2)
   })
@@ -174,7 +172,7 @@ describe('PanelStore - 查找面板', () => {
 
   it('应该能找到根面板', () => {
     const panelStore = usePanelStore()
-    const defaultPanelId = panelStore.panels[0].id
+    const defaultPanelId = panelStore.rootPanel.id
 
     const panel = panelStore.findPanel(defaultPanelId)
 
@@ -184,11 +182,11 @@ describe('PanelStore - 查找面板', () => {
 
   it('应该能找到嵌套的子面板', () => {
     const panelStore = usePanelStore()
-    const defaultPanelId = panelStore.panels[0].id
+    const defaultPanelId = panelStore.rootPanel.id
 
     panelStore.splitPanel(defaultPanelId, 'after', 'horizontal')
 
-    const parentPanel = panelStore.panels.find(p => p.children)
+    const parentPanel = panelStore.rootPanel.children ? panelStore.rootPanel : undefined
     const childPanelId = parentPanel?.children?.[0].id
 
     const childPanel = panelStore.findPanel(childPanelId!)
@@ -207,11 +205,11 @@ describe('PanelStore - 查找面板', () => {
 
   it('应该能找到子面板的父面板', () => {
     const panelStore = usePanelStore()
-    const defaultPanelId = panelStore.panels[0].id
+    const defaultPanelId = panelStore.rootPanel.id
 
     panelStore.splitPanel(defaultPanelId, 'after', 'horizontal')
 
-    const parentPanel = panelStore.panels.find(p => p.children)
+    const parentPanel = panelStore.rootPanel.children ? panelStore.rootPanel : undefined
     const childPanelId = parentPanel?.children?.[0].id
 
     const foundParent = panelStore.findParentPanel(childPanelId!)

@@ -44,7 +44,7 @@ describe('PanelStore - 面板合并', () => {
     // 创建分屏
     panelStore.splitPanel('panel-default', 'after', 'horizontal')
 
-    const parentPanel = panelStore.panels.find(p => p.children)
+    const parentPanel = panelStore.rootPanel.children ? panelStore.rootPanel : undefined
     expect(parentPanel?.children).toHaveLength(2)
 
     // 关闭一个子面板

@@ -143,7 +143,7 @@ describe('PanelStore - 拖放操作', () => {
     panelStore.handleDrop(tabId, 'left', 'panel-default')
 
     // 应该创建了新的分屏
-    const parentPanel = panelStore.panels.find(p => p.children)
+    const parentPanel = panelStore.rootPanel.children ? panelStore.rootPanel : undefined
     expect(parentPanel).toBeDefined()
     expect(parentPanel?.direction).toBe('vertical')
   })
@@ -293,7 +293,7 @@ describe('PanelStore - 拖放操作', () => {
 
     panelStore.handleContainerDrop(tabsStore.tabs[0].id, 'right')
 
-    expect(panelStore.panels[0].direction).toBe('vertical')
+    expect(panelStore.rootPanel.direction).toBe('vertical')
     expect(panelStore.flatPanels).toHaveLength(2)
     expect(panelStore.flatPanels[1].tabs[0].id).toBe(tabsStore.tabs[0].id)
   })

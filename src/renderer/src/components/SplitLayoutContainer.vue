@@ -7,9 +7,7 @@
     @dragleave="handleContainerDragLeave"
   >
     <div class="splitpanes-root">
-      <template v-for="panel in panelStore.panels" :key="panel.id">
-        <PanelRenderer :panel="panel" />
-      </template>
+      <PanelRenderer :panel="panelStore.rootPanel" />
     </div>
     <WebViewLayer />
     <DragPreviewLayer />

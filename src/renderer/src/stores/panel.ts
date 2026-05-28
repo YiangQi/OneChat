@@ -46,9 +46,7 @@ function createLeafPanel(id: string): Panel {
 export const usePanelStore = defineStore('panel', () => {
   const tabsStore = useTabsStore()
 
-  const panels = ref<Panel[]>([
-    createLeafPanel('panel-default')
-  ])
+  const rootPanel = ref<Panel>(createLeafPanel('panel-default'))
 
   const dragPreview = ref<DragPreview>({
     visible: false,
@@ -83,7 +81,7 @@ export const usePanelStore = defineStore('panel', () => {
       }
     }
 
-    flatten(panels.value)
+    flatten([rootPanel.value])
     return result
   })
 
@@ -113,7 +111,7 @@ export const usePanelStore = defineStore('panel', () => {
       return undefined
     }
 
-    return search(panels.value)
+    return search([rootPanel.value])
   }
 
   function findParentPanel(panelId: string): Panel | undefined {
@@ -131,7 +129,7 @@ export const usePanelStore = defineStore('panel', () => {
       return undefined
     }
 
-    return search(panels.value)
+    return search([rootPanel.value])
   }
 
   function findPanelContainingTab(tabId: string): Panel | undefined {
@@ -248,7 +246,7 @@ export const usePanelStore = defineStore('panel', () => {
 
   function resetToDefaultPanel(): Panel {
     const panel = createLeafPanel('panel-default')
-    panels.value = [panel]
+    rootPanel.value = panel
     return panel
   }
 
@@ -357,8 +355,7 @@ export const usePanelStore = defineStore('panel', () => {
         replaceChild(parent, targetPanelId, nestedParent)
       }
     } else {
-      const rootIndex = panels.value.findIndex(panel => panel.id === targetPanelId)
-      if (rootIndex === -1) return null
+      if (rootPanel.value.id !== targetPanelId) return null
 
       const newParent: Panel = {
         id: createPanelId('panel-parent'),
@@ -371,7 +368,7 @@ export const usePanelStore = defineStore('panel', () => {
         sizes: [50, 50]
       }
 
-      panels.value.splice(rootIndex, 1, newParent)
+      rootPanel.value = newParent
     }
 
     return newPanel.id
@@ -525,8 +522,7 @@ export const usePanelStore = defineStore('panel', () => {
     const insertPosition = getRootSplitInsertPosition(position)
     if (!direction || !insertPosition) return null
 
-    const existingRoot = panels.value[0]
-    if (!existingRoot) return null
+    const existingRoot = rootPanel.value
 
     const newPanel = createLeafPanel(createPanelId())
     ensureCompatTabs(newPanel)
@@ -542,7 +538,7 @@ export const usePanelStore = defineStore('panel', () => {
       sizes: [50, 50]
     }
 
-    panels.value.splice(0, 1, newRoot)
+    rootPanel.value = newRoot
     return newPanel.id
   }
 
@@ -662,14 +658,11 @@ export const usePanelStore = defineStore('panel', () => {
 
     if (panel.id === 'panel-default') return
 
-    const rootIndex = panels.value.findIndex(rootPanel => rootPanel.id === panelId)
-    if (rootIndex !== -1) {
+    if (rootPanel.value.id === panelId) {
       if (flatPanels.value.length <= 1) {
         resetToDefaultPanel()
         return
       }
-
-      panels.value.splice(rootIndex, 1)
     }
   }
 
@@ -687,9 +680,8 @@ export const usePanelStore = defineStore('panel', () => {
       return
     }
 
-    const rootIndex = panels.value.findIndex(panel => panel.id === parentPanel.id)
-    if (rootIndex !== -1) {
-      panels.value.splice(rootIndex, 1, onlyChild)
+    if (rootPanel.value.id === parentPanel.id) {
+      rootPanel.value = onlyChild
     }
   }
 
@@ -705,7 +697,7 @@ export const usePanelStore = defineStore('panel', () => {
   )
 
   return {
-    panels,
+    rootPanel,
     dragPreview,
     isDraggingGlobal,
     isResizingSplitters,

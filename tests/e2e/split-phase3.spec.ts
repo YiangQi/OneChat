@@ -94,8 +94,8 @@ test.describe('Split Layout Phase 3 - advanced behavior', () => {
       return {
         leafCount: panelStore.flatPanels.length,
         tabCounts: panelStore.flatPanels.map((panel: any) => panel.tabs.length),
-        rootSizes: panelStore.panels[0].sizes,
-        rootChildCount: panelStore.panels[0].children?.length ?? 0
+        rootSizes: panelStore.rootPanel.sizes,
+        rootChildCount: panelStore.rootPanel.children?.length ?? 0
       }
     })
 
@@ -130,8 +130,8 @@ test.describe('Split Layout Phase 3 - advanced behavior', () => {
     await mainWindow.evaluate(() => {
       // @ts-ignore
       const { panelStore } = window.$stores || {}
-      if (panelStore?.panels[0]?.children?.length === 3) {
-        panelStore.panels[0].sizes = [20, 20, 20]
+      if (panelStore?.rootPanel?.children?.length === 3) {
+        panelStore.rootPanel.sizes = [20, 20, 20]
       }
     })
 
