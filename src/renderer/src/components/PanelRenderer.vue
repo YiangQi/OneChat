@@ -2,6 +2,7 @@
   <splitpanes
     ref="splitpanesRef"
     v-if="panel.direction"
+    :key="splitpanesKey"
     :horizontal="panel.direction === 'horizontal'"
     class="custom-splitpanes"
     @resize="handleResize"
@@ -55,6 +56,11 @@ const paneSizes = computed(() => normalizePaneSizes(
   props.panel.sizes,
   props.panel.children?.length ?? 0
 ))
+
+const splitpanesKey = computed(() => {
+  const childIds = props.panel.children?.map(child => child.id).join(',') ?? ''
+  return `${props.panel.id}:${props.panel.direction}:${childIds}`
+})
 
 const minPaneSize = computed(() => {
   const paneCount = props.panel.children?.length ?? 1
