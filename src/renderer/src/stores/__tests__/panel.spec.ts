@@ -28,7 +28,7 @@ describe('PanelStore - reopen after closing dragged tabs', () => {
     setActivePinia(createPinia())
   })
 
-  it('keeps a fallback panel after the last non-default root tab is closed', async () => {
+  it('keeps the last root leaf panel after its final tab is closed', async () => {
     const panelStore = usePanelStore()
     const tabsStore = useTabsStore()
 
@@ -57,7 +57,7 @@ describe('PanelStore - reopen after closing dragged tabs', () => {
 
     panelStore.closeTab(newPanelId, firstTabId)
     expect(panelStore.flatPanels).toHaveLength(1)
-    expect(panelStore.rootPanel.id).toBe('panel-default')
+    expect(panelStore.rootPanel.id).toBe(newPanelId)
 
     tabsStore.openTab({
       id: 'doubao',
@@ -69,7 +69,7 @@ describe('PanelStore - reopen after closing dragged tabs', () => {
 
     const reopenedTab = tabsStore.tabs[0]
     const ownerPanel = panelStore.findPanelContainingTab(reopenedTab.id)
-    expect(ownerPanel?.id).toBe('panel-default')
+    expect(ownerPanel?.id).toBe(newPanelId)
     expect(ownerPanel?.activeTabId).toBe(reopenedTab.id)
   })
 })

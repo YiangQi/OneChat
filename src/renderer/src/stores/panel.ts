@@ -239,15 +239,9 @@ export const usePanelStore = defineStore('panel', () => {
     return null
   }
 
-  function getInsertionTargetPanel(): Panel | undefined {
+  function getInsertionTargetPanel(): Panel {
     const activePanel = tabsStore.activeTabId ? findPanelContainingTab(tabsStore.activeTabId) : undefined
-    return activePanel ?? findPanel('panel-default') ?? flatPanels.value[0] ?? resetToDefaultPanel()
-  }
-
-  function resetToDefaultPanel(): Panel {
-    const panel = createLeafPanel('panel-default')
-    rootPanel.value = panel
-    return panel
+    return activePanel ?? flatPanels.value[0] ?? rootPanel.value
   }
 
   function normalizeLeafPanel(panel: Panel) {
@@ -268,14 +262,10 @@ export const usePanelStore = defineStore('panel', () => {
     for (const panel of leafPanels) {
       if (panel.tabIds.length > 0) continue
 
-      const isRootDefault = panel.id === 'panel-default' && !findParentPanel(panel.id)
-      if (isRootDefault) continue
+      const isRootLeaf = panel.id === rootPanel.value.id && !findParentPanel(panel.id)
+      if (isRootLeaf) continue
 
       closePanel(panel.id)
-    }
-
-    if (flatPanels.value.length === 0) {
-      resetToDefaultPanel()
     }
   }
 
@@ -291,11 +281,9 @@ export const usePanelStore = defineStore('panel', () => {
 
     if (unassignedIds.length > 0) {
       const targetPanel = getInsertionTargetPanel()
-      if (targetPanel) {
-        targetPanel.tabIds = [...targetPanel.tabIds, ...unassignedIds]
-        if (!targetPanel.activeTabId || unassignedIds.includes(tabsStore.activeTabId)) {
-          targetPanel.activeTabId = tabsStore.activeTabId || unassignedIds[unassignedIds.length - 1]
-        }
+      targetPanel.tabIds = [...targetPanel.tabIds, ...unassignedIds]
+      if (!targetPanel.activeTabId || unassignedIds.includes(tabsStore.activeTabId)) {
+        targetPanel.activeTabId = tabsStore.activeTabId || unassignedIds[unassignedIds.length - 1]
       }
     }
 
@@ -656,14 +644,7 @@ export const usePanelStore = defineStore('panel', () => {
       return
     }
 
-    if (panel.id === 'panel-default') return
-
-    if (rootPanel.value.id === panelId) {
-      if (flatPanels.value.length <= 1) {
-        resetToDefaultPanel()
-        return
-      }
-    }
+    if (rootPanel.value.id === panelId) return
   }
 
   function mergePanel(parentPanel: Panel) {
