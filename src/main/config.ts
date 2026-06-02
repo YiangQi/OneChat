@@ -1,5 +1,5 @@
 import { readFile, access, constants } from 'fs/promises'
-import { join } from 'path'
+import { dirname, join } from 'path'
 import { app } from 'electron'
 import type { AIModel, AIModelConfig, OnlineConfigResult } from '../shared/types'
 
@@ -7,8 +7,8 @@ function getOnlineConfigPath() {
   return join(app.getPath('userData'), 'online.json')
 }
 
-function getRepoConfigPath() {
-  return join(app.isPackaged ? app.getAppPath() : process.cwd(), 'online', 'online.json')
+function getBundledConfigPath() {
+  return join(getOnlineDirectoryPath(), 'online.json')
 }
 
 /**
@@ -23,7 +23,7 @@ export async function readOnlineConfig(): Promise<OnlineConfigResult> {
   const configPath = await getConfigPath()
 
   if (!configPath) {
-    console.warn('online.json not found in userData or repo directory')
+    console.warn('online.json not found in userData or online directory')
     return {
       models: [],
       onlineDir: getOnlineDirectoryPath()
@@ -53,7 +53,7 @@ export async function readOnlineConfig(): Promise<OnlineConfigResult> {
 
 /**
  * Gets the path to the online.json configuration file
- * Checks userData first, then falls back to the repo directory
+ * Checks userData first, then falls back to the app online directory
  *
  * @returns Promise<string | null> Path to the config file or null if not found
  */
@@ -63,10 +63,10 @@ async function getConfigPath(): Promise<string | null> {
     await access(getOnlineConfigPath(), constants.R_OK)
     return getOnlineConfigPath()
   } catch {
-    // Fall back to repo directory
+    // Fall back to the app online directory
     try {
-      await access(getRepoConfigPath(), constants.R_OK)
-      return getRepoConfigPath()
+      await access(getBundledConfigPath(), constants.R_OK)
+      return getBundledConfigPath()
     } catch {
       return null
     }
@@ -84,13 +84,14 @@ export function getOnlineConfigPathExport(): string {
 
 /**
  * Gets the directory path where online resources (icons, scripts) are located
- * This returns the repo's online/ directory path for the renderer to load resources
+ * This returns the app online/ directory path for the renderer to load resources
  *
  * @returns string Path to the online resources directory
  */
 export function getOnlineDirectoryPath(): string {
-  // In production (packaged app), use app.getAppPath() to get the app's resource directory
-  // In development, process.cwd() works correctly
-  const basePath = app.isPackaged ? app.getAppPath() : process.cwd()
-  return join(basePath, 'online')
+  if (app.isPackaged) {
+    return join(dirname(process.execPath), 'online')
+  }
+
+  return join(process.cwd(), 'online')
 }

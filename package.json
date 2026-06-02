@@ -15,6 +15,17 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report"
   },
+  "build": {
+    "extraFiles": [
+      {
+        "from": "online",
+        "to": "online",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
+  },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
     "element-plus": "^2.5.0",

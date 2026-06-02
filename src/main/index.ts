@@ -1,6 +1,6 @@
 import { app, ipcMain, protocol, nativeTheme, dialog, BrowserWindow } from 'electron'
 import { createMainWindow, closeAllWindows, createIndependentWindow, registerWindowIpcHandlers } from './window'
-import { readOnlineConfig } from './config'
+import { getOnlineDirectoryPath, readOnlineConfig } from './config'
 import { IPC_CHANNELS } from '../shared/constants'
 import { join, resolve, relative } from 'path'
 import { mkdir, readFile, writeFile } from 'fs/promises'
@@ -32,9 +32,7 @@ function registerOnlineProtocol() {
       // Extract the path from the URL (e.g., 'online://openai_chatgpt/logo.png' -> 'openai_chatgpt/logo.png')
       const urlPath = request.url.substring('online://'.length)
 
-      // Determine the base path for online files
-      const basePath = app.isPackaged ? join(process.resourcesPath, 'online') : join(process.cwd(), 'online')
-      const filePath = join(basePath, urlPath)
+      const filePath = join(getOnlineDirectoryPath(), urlPath)
 
       // Read the file
       const data = await readFile(filePath)
@@ -67,7 +65,7 @@ function registerOnlineProtocol() {
 }
 
 function getOnlineBasePath() {
-  return app.isPackaged ? join(process.resourcesPath, 'online') : join(process.cwd(), 'online')
+  return getOnlineDirectoryPath()
 }
 
 function resolveOnlineScriptPath(scriptPath: string) {
