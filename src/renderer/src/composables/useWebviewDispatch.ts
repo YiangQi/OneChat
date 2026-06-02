@@ -1,5 +1,5 @@
 import { useComposerTargets } from './useComposerTargets'
-import { createCallBridgeDispatchScript } from '@/utils/webviewInjection'
+import { IPC_CHANNELS } from '@shared/constants'
 
 /**
  * Event types that can be dispatched to webview adapters.
@@ -30,6 +30,11 @@ export interface FilePayload {
   type: string // MIME type
 }
 
+export interface WebviewAdapterEventPayload {
+  eventName: string
+  args: unknown[]
+}
+
 /**
  * Safely dispatch an adapter event in a webview's context.
  * Returns true if successful, false otherwise.
@@ -46,16 +51,8 @@ function executeWebviewEvent(
       return false
     }
 
-    const code = createCallBridgeDispatchScript(eventName, args)
-    webview.executeJavaScript(code, false)
-      .then((result: unknown) => {
-        if (result === false) {
-          console.warn(`[WebviewDispatch] CallBridge unavailable for ${eventName}`)
-        }
-      })
-      .catch((error: Error) => {
-        console.error(`[WebviewDispatch] Error dispatching ${eventName}:`, error)
-      })
+    const payload: WebviewAdapterEventPayload = { eventName, args }
+    webview.send(IPC_CHANNELS.WEBVIEW_ADAPTER_EVENT, payload)
 
     return true
   } catch (error) {

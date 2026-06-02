@@ -21,6 +21,7 @@
       @did-fail-load="handleFailLoad"
       @did-navigate="handleNavigate"
       @did-navigate-in-page="handleNavigate"
+      @ipc-message="handleIpcMessage"
     ></webview>
   </div>
 </template>
@@ -32,14 +33,12 @@ import { usePanelStore } from '@/stores/panel'
 import { useComposerStore } from '@/stores/composer'
 import { useThemeStore } from '@/stores/theme'
 import { useConversationsStore } from '@/stores/conversations'
+import { IPC_CHANNELS } from '@shared/constants'
 import {
   createCallBridgeBootstrapScript,
-  createCallBridgeDispatchScript,
-  createReadInvokedEventsScript,
   createScriptInjectionScript,
   loadCommonInjectScript,
   loadProviderInjectScript,
-  type BrowserInvokeEvent,
   type WebviewInitArgs
 } from '@/utils/webviewInjection'
 
@@ -67,8 +66,8 @@ const isInjected = ref(false)
 const isInjecting = ref(false)
 const loadEndedSynced = ref(false)
 const lastUrlChanged = ref('')
+const adapterReady = ref(false)
 let injectionPromise: Promise<boolean> | null = null
-let invokeDrainTimer: ReturnType<typeof window.setInterval> | null = null
 let earlyInjectionTimer: ReturnType<typeof window.setInterval> | null = null
 
 const containerStyle = computed(() => ({
@@ -104,7 +103,6 @@ void window.electronAPI.getWebviewPreloadPath(props.model.script)
 onUnmounted(() => {
   isDestroyed.value = true
   stopEarlyInjectionRetries()
-  stopInvokeDrainPolling()
   conversationsStore.clearModel(props.model.id)
 })
 
@@ -165,7 +163,8 @@ async function injectScripts() {
     }
 
     isInjected.value = true
-    startInvokeDrainPolling()
+    adapterReady.value = true
+    webview.setAttribute('data-adapter-ready', 'true')
     return true
   } catch (error) {
     console.error('[WebView] Injection failed:', props.model.name, error)
@@ -177,10 +176,12 @@ async function injectScripts() {
 
 async function dispatchAdapterEvent(eventName: string, ...args: unknown[]) {
   const injected = await ensureInjected()
-  if (!injected) return false
+  const webview = webviewRef.value
+  if (!injected || !webview || !adapterReady.value) return false
 
   try {
-    return Boolean(await executeInWebview(createCallBridgeDispatchScript(eventName, args)))
+    webview.send(IPC_CHANNELS.WEBVIEW_ADAPTER_EVENT, { eventName, args })
+    return true
   } catch (error) {
     console.error(`[WebView] Failed to dispatch ${eventName}:`, props.model.name, error)
     return false
@@ -193,7 +194,6 @@ async function syncLoadEnded() {
   const dispatched = await dispatchAdapterEvent('loadEnded', getInitArgs())
   if (dispatched) {
     loadEndedSynced.value = true
-    await drainBrowserInvokeEvents()
   }
 }
 
@@ -204,38 +204,29 @@ async function syncUrlChanged() {
   const dispatched = await dispatchAdapterEvent('urlChanged', getInitArgs())
   if (dispatched) {
     lastUrlChanged.value = currentUrl
-    await drainBrowserInvokeEvents()
   }
 }
 
-async function drainBrowserInvokeEvents() {
-  try {
-    const events = await executeInWebview(createReadInvokedEventsScript(true)) as BrowserInvokeEvent[] | null
-    if (!Array.isArray(events) || events.length === 0) return
-
-    for (const event of events) {
-      if (event.name === 'webLoadEnded') {
-        loadEndedSynced.value = true
-      } else if (event.name === 'webConversationListUpdated') {
-        const [conversations] = event.args
-        if (!Array.isArray(conversations)) {
-          console.warn('[WebView] Invalid conversation list event:', props.model.name, event.args)
-          continue
-        }
-        conversationsStore.setConversations(props.model.id, conversations)
-      } else if (event.name === 'webConversationChanged') {
-        const [conversationId] = event.args
-        if (conversationId != null && typeof conversationId !== 'string') {
-          console.warn('[WebView] Invalid conversation changed event:', props.model.name, event.args)
-          continue
-        }
-        conversationsStore.setActiveConversation(props.model.id, conversationId ?? '')
-      }
-      console.debug('[WebView] Browser method invoked:', props.model.name, event.name, event.args)
+function handleBrowserInvokeEvent(event: { name: string, args: unknown[], timestamp?: number }) {
+  if (event.name === 'webLoadEnded') {
+    loadEndedSynced.value = true
+  } else if (event.name === 'webConversationListUpdated') {
+    const [conversations] = event.args
+    if (!Array.isArray(conversations)) {
+      console.warn('[WebView] Invalid conversation list event:', props.model.name, event.args)
+      return
     }
-  } catch (error) {
-    console.warn('[WebView] Failed to read browser invoke events:', props.model.name, error)
+    conversationsStore.setConversations(props.model.id, conversations)
+  } else if (event.name === 'webConversationChanged') {
+    const [conversationId] = event.args
+    if (conversationId != null && typeof conversationId !== 'string') {
+      console.warn('[WebView] Invalid conversation changed event:', props.model.name, event.args)
+      return
+    }
+    conversationsStore.setActiveConversation(props.model.id, conversationId ?? '')
   }
+
+  console.debug('[WebView] Browser method invoked:', props.model.name, event.name, event.args)
 }
 
 async function handleDomReady() {
@@ -265,26 +256,12 @@ function stopEarlyInjectionRetries() {
   earlyInjectionTimer = null
 }
 
-function startInvokeDrainPolling() {
-  if (invokeDrainTimer || isDestroyed.value) return
-
-  invokeDrainTimer = window.setInterval(() => {
-    if (isDestroyed.value || !isInjected.value) return
-    void drainBrowserInvokeEvents()
-  }, 1000)
-}
-
-function stopInvokeDrainPolling() {
-  if (!invokeDrainTimer) return
-  window.clearInterval(invokeDrainTimer)
-  invokeDrainTimer = null
-}
-
 function handleStartLoading() {
   isInjected.value = false
+  adapterReady.value = false
+  webviewRef.value?.removeAttribute('data-adapter-ready')
   loadEndedSynced.value = false
   lastUrlChanged.value = ''
-  stopInvokeDrainPolling()
   startEarlyInjectionRetries()
 }
 
@@ -300,6 +277,21 @@ function handleFailLoad(event: any) {
 async function handleNavigate() {
   await ensureInjected()
   await syncUrlChanged()
+}
+
+function handleIpcMessage(event: any) {
+  if (event.channel === IPC_CHANNELS.WEBVIEW_ADAPTER_READY) {
+    adapterReady.value = true
+    webviewRef.value?.setAttribute('data-adapter-ready', 'true')
+    return
+  }
+
+  if (event.channel === IPC_CHANNELS.WEBVIEW_BROWSER_EVENT) {
+    const [browserEvent] = event.args ?? []
+    if (browserEvent && typeof browserEvent.name === 'string' && Array.isArray(browserEvent.args)) {
+      handleBrowserInvokeEvent(browserEvent)
+    }
+  }
 }
 
 </script>

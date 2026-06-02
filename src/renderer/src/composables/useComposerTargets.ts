@@ -76,8 +76,7 @@ export function useComposerTargets() {
     const webview = getWebviewForTab(tabId)
     if (!webview) return false
 
-    // Check if webview is loaded (has a valid src and is ready to receive messages)
-    return webview.getAttribute('src') !== null
+    return webview.getAttribute('src') !== null && webview.getAttribute('data-adapter-ready') === 'true'
   }
 
   /**

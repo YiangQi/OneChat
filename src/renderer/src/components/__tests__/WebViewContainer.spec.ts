@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import WebViewContainer from '../WebViewContainer.vue'
+import { IPC_CHANNELS } from '@shared/constants'
 import type { AIModel } from '@shared/types'
 
 const injectionMock = vi.hoisted(() => ({
@@ -50,6 +51,7 @@ async function prepareWebview(wrapper: ReturnType<typeof mountContainer>) {
   const element = wrapper.find('webview').element as unknown as Electron.WebviewTag & {
     executeJavaScript: ReturnType<typeof vi.fn>
     getURL: ReturnType<typeof vi.fn>
+    send: ReturnType<typeof vi.fn>
   }
 
   element.executeJavaScript = vi.fn(async (script: string) => {
@@ -57,6 +59,7 @@ async function prepareWebview(wrapper: ReturnType<typeof mountContainer>) {
     return true
   })
   element.getURL = vi.fn(() => 'https://chat.openai.com/')
+  element.send = vi.fn()
 
   return element
 }
@@ -66,6 +69,12 @@ async function triggerAndFlush(wrapper: ReturnType<typeof mountContainer>, event
   await flushPromises()
   await wrapper.vm.$nextTick()
   await flushPromises()
+}
+
+async function triggerIpcMessage(wrapper: ReturnType<typeof mountContainer>, channel: string, ...args: unknown[]) {
+  await wrapper.find('webview').trigger('ipc-message', { channel, args })
+  await flushPromises()
+  await wrapper.vm.$nextTick()
 }
 
 describe('WebViewContainer injection', () => {
@@ -105,16 +114,19 @@ describe('WebViewContainer injection', () => {
     await triggerAndFlush(wrapper, 'dom-ready')
     await triggerAndFlush(wrapper, 'did-finish-load')
 
-    expect(injectionMock.createCallBridgeDispatchScript).toHaveBeenCalledWith('loadEnded', [
-      expect.objectContaining({
-        isInputBoxVisible: true,
-        isSidebarVisible: true,
-        isDeepThinkChecked: false,
-        isWebSearchChecked: false,
-        appLanguage: 0
-      })
-    ])
-    expect(webview.executeJavaScript).toHaveBeenCalledWith('loadEnded-dispatch', false)
+    expect(injectionMock.createCallBridgeDispatchScript).not.toHaveBeenCalled()
+    expect(webview.send).toHaveBeenCalledWith(IPC_CHANNELS.WEBVIEW_ADAPTER_EVENT, {
+      eventName: 'loadEnded',
+      args: [
+        expect.objectContaining({
+          isInputBoxVisible: true,
+          isSidebarVisible: true,
+          isDeepThinkChecked: false,
+          isWebSearchChecked: false,
+          appLanguage: 0
+        })
+      ]
+    })
   })
 
   it('dispatches urlChanged on navigation', async () => {
@@ -124,8 +136,11 @@ describe('WebViewContainer injection', () => {
     await triggerAndFlush(wrapper, 'dom-ready')
     await triggerAndFlush(wrapper, 'did-navigate')
 
-    expect(injectionMock.createCallBridgeDispatchScript).toHaveBeenCalledWith('urlChanged', [expect.any(Object)])
-    expect(webview.executeJavaScript).toHaveBeenCalledWith('urlChanged-dispatch', false)
+    expect(injectionMock.createCallBridgeDispatchScript).not.toHaveBeenCalled()
+    expect(webview.send).toHaveBeenCalledWith(IPC_CHANNELS.WEBVIEW_ADAPTER_EVENT, {
+      eventName: 'urlChanged',
+      args: [expect.any(Object)]
+    })
   })
 
   it('keeps the webview usable when provider script is missing', async () => {
@@ -151,47 +166,36 @@ describe('WebViewContainer injection', () => {
 
   it('stores browser conversation events', async () => {
     const wrapper = mountContainer()
-    const webview = await prepareWebview(wrapper)
+    await prepareWebview(wrapper)
     const conversationsStore = (await import('@/stores/conversations')).useConversationsStore()
 
-    webview.executeJavaScript.mockImplementation(async (script: string) => {
-      if (script === 'read-invoke-events') {
-        return [
-          { name: 'webConversationListUpdated', args: [[{ id: 'c1', title: 'First chat' }]], timestamp: 1 },
-          { name: 'webConversationChanged', args: ['c1'], timestamp: 2 }
-        ]
-      }
-      return true
-    })
-
     await triggerAndFlush(wrapper, 'dom-ready')
-    await triggerAndFlush(wrapper, 'did-finish-load')
+    await triggerIpcMessage(
+      wrapper,
+      IPC_CHANNELS.WEBVIEW_BROWSER_EVENT,
+      { name: 'webConversationListUpdated', args: [[{ id: 'c1', title: 'First chat' }]], timestamp: 1 }
+    )
+    await triggerIpcMessage(
+      wrapper,
+      IPC_CHANNELS.WEBVIEW_BROWSER_EVENT,
+      { name: 'webConversationChanged', args: ['c1'], timestamp: 2 }
+    )
 
     expect(conversationsStore.byModelId.chatgpt.conversations).toEqual([{ id: 'c1', title: 'First chat' }])
     expect(conversationsStore.byModelId.chatgpt.activeConversationId).toBe('c1')
   })
 
-  it('polls delayed browser conversation events after injection', async () => {
+  it('stores delayed browser conversation events through ipc-message', async () => {
     const wrapper = mountContainer()
-    const webview = await prepareWebview(wrapper)
+    await prepareWebview(wrapper)
     const conversationsStore = (await import('@/stores/conversations')).useConversationsStore()
-    let shouldReturnEvents = false
-
-    webview.executeJavaScript.mockImplementation(async (script: string) => {
-      if (script === 'read-invoke-events') {
-        if (!shouldReturnEvents) return []
-        shouldReturnEvents = false
-        return [
-          { name: 'webConversationListUpdated', args: [[{ id: 'late-1', title: 'Late chat' }]], timestamp: 1 }
-        ]
-      }
-      return true
-    })
 
     await triggerAndFlush(wrapper, 'dom-ready')
-    shouldReturnEvents = true
-    vi.advanceTimersByTime(1000)
-    await flushPromises()
+    await triggerIpcMessage(
+      wrapper,
+      IPC_CHANNELS.WEBVIEW_BROWSER_EVENT,
+      { name: 'webConversationListUpdated', args: [[{ id: 'late-1', title: 'Late chat' }]], timestamp: 1 }
+    )
 
     expect(conversationsStore.byModelId.chatgpt.conversations).toEqual([{ id: 'late-1', title: 'Late chat' }])
   })

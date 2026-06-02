@@ -5,6 +5,7 @@ import { useWebviewDispatch } from '../useWebviewDispatch'
 import { useComposerStore } from '@/stores/composer'
 import { usePanelStore } from '@/stores/panel'
 import { useTabsStore } from '@/stores/tabs'
+import { IPC_CHANNELS } from '@shared/constants'
 import type { AIModel } from '@shared/types'
 
 const model = (id: string): AIModel => ({
@@ -17,10 +18,13 @@ const model = (id: string): AIModel => ({
 function addWebview(tabId: string) {
   const webview = document.createElement('webview') as unknown as Electron.WebviewTag & {
     executeJavaScript: ReturnType<typeof vi.fn>
+    send: ReturnType<typeof vi.fn>
   }
   webview.setAttribute('data-tab-id', tabId)
   webview.setAttribute('src', `https://example.com/${tabId}`)
+  webview.setAttribute('data-adapter-ready', 'true')
   webview.executeJavaScript = vi.fn(() => Promise.resolve(true))
+  webview.send = vi.fn()
   document.body.appendChild(webview)
   return webview
 }
@@ -49,9 +53,11 @@ describe('useWebviewDispatch', () => {
     const count = dispatch.dispatchInputTextChanged('hello')
 
     expect(count).toBe(1)
-    expect(chatgptWebview.executeJavaScript).not.toHaveBeenCalled()
-    expect(claudeWebview.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('CallBridge.dispatchEvent'), false)
-    expect(claudeWebview.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('inputTextChanged'), false)
+    expect(chatgptWebview.send).not.toHaveBeenCalled()
+    expect(claudeWebview.send).toHaveBeenCalledWith(IPC_CHANNELS.WEBVIEW_ADAPTER_EVENT, {
+      eventName: 'inputTextChanged',
+      args: ['hello']
+    })
   })
 
   it('dispatches to all open tabs', async () => {
@@ -71,11 +77,17 @@ describe('useWebviewDispatch', () => {
     const count = dispatch.dispatchInputTextSended()
 
     expect(count).toBe(2)
-    expect(chatgptWebview.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('inputTextSended'), false)
-    expect(claudeWebview.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('inputTextSended'), false)
+    expect(chatgptWebview.send).toHaveBeenCalledWith(IPC_CHANNELS.WEBVIEW_ADAPTER_EVENT, {
+      eventName: 'inputTextSended',
+      args: []
+    })
+    expect(claudeWebview.send).toHaveBeenCalledWith(IPC_CHANNELS.WEBVIEW_ADAPTER_EVENT, {
+      eventName: 'inputTextSended',
+      args: []
+    })
   })
 
-  it('rehydrates file payloads inside the webview script', async () => {
+  it('sends file payloads through the webview adapter channel', async () => {
     const tabsStore = useTabsStore()
     usePanelStore()
     const dispatch = useWebviewDispatch()
@@ -91,8 +103,13 @@ describe('useWebviewDispatch', () => {
     })
 
     expect(count).toBe(1)
-    expect(webview.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('bytes.buffer'), false)
-    expect(webview.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('fileName: arg.name'), false)
-    expect(webview.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('addFileButtonClicked'), false)
+    expect(webview.send).toHaveBeenCalledWith(IPC_CHANNELS.WEBVIEW_ADAPTER_EVENT, {
+      eventName: 'addFileButtonClicked',
+      args: [{
+        data: 'aGVsbG8=',
+        name: 'hello.txt',
+        type: 'text/plain'
+      }]
+    })
   })
 })

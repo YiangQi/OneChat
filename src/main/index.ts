@@ -96,8 +96,52 @@ function createCallBridgeBootstrapSource() {
     commonInjected: false,
     loadEndedDispatched: false,
     lastUrlChanged: "",
-    invokeEvents: []
+    invokeEvents: [],
+    adapterMessageReady: false,
+    browserMessageReady: false
   });
+
+  function normalizeAdapterArg(arg) {
+    if (arg && typeof arg === "object" && "data" in arg && "name" in arg && "type" in arg) {
+      const binary = atob(arg.data);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+
+      return {
+        data: bytes.buffer,
+        fileName: arg.name,
+        name: arg.name,
+        fileType: arg.type,
+        type: arg.type
+      };
+    }
+    return arg;
+  }
+
+  if (!state.adapterMessageReady) {
+    window.addEventListener("message", (event) => {
+      if (event.source !== window) return;
+      const data = event.data;
+      if (!data || data.source !== "__ONECHAT_ADAPTER_EVENT__") return;
+
+      const payload = data.payload;
+      if (!payload || typeof payload.eventName !== "string" || !Array.isArray(payload.args)) return;
+      if (!window.CallBridge || typeof window.CallBridge.dispatchEvent !== "function") return;
+
+      const args = payload.args.map(normalizeAdapterArg);
+      window.CallBridge.dispatchEvent(payload.eventName, ...args);
+    });
+    state.adapterMessageReady = true;
+  }
+
+  function postBrowserEvent(event) {
+    window.postMessage({
+      source: "__ONECHAT_BROWSER_EVENT__",
+      payload: event
+    }, "*");
+  }
 
   if (state.bridgeReady && window.CallBridge) return;
 
@@ -124,8 +168,10 @@ function createCallBridgeBootstrapSource() {
       return handled;
     },
     invoke(name, ...args) {
-      state.invokeEvents.push({ name, args, timestamp: Date.now() });
+      const event = { name, args, timestamp: Date.now() };
+      state.invokeEvents.push(event);
       if (state.invokeEvents.length > 100) state.invokeEvents.shift();
+      postBrowserEvent(event);
       return true;
     },
     getInvokedEvents() {
@@ -164,8 +210,28 @@ async function createWebviewPreload(scriptPath: string | undefined) {
 `
   ].join('\n;\n')
   const preloadSource = [
-    "const { webFrame } = require('electron')",
-    `webFrame.executeJavaScript(${JSON.stringify(pageWorldSource)})`
+    "const { ipcRenderer, webFrame } = require('electron')",
+    `ipcRenderer.on(${JSON.stringify(IPC_CHANNELS.WEBVIEW_ADAPTER_EVENT)}, (_event, payload) => {
+  window.postMessage({
+    source: "__ONECHAT_ADAPTER_EVENT__",
+    payload
+  }, "*")
+})`,
+    `window.addEventListener("message", (event) => {
+  if (event.source !== window) return
+  const data = event.data
+  if (!data || data.source !== "__ONECHAT_BROWSER_EVENT__") return
+  ipcRenderer.sendToHost(${JSON.stringify(IPC_CHANNELS.WEBVIEW_BROWSER_EVENT)}, data.payload)
+})`,
+    `webFrame.executeJavaScript(${JSON.stringify(pageWorldSource)})
+  .then(() => {
+    ipcRenderer.sendToHost(${JSON.stringify(IPC_CHANNELS.WEBVIEW_ADAPTER_READY)}, {
+      providerScript: ${JSON.stringify(scriptPath || '')}
+    })
+  })
+  .catch((error) => {
+    console.error("[OneChat Preload] failed to initialize adapter", error)
+  })`
   ].join('\n')
 
   const outputDir = join(app.getPath('userData'), 'webview-preloads')
