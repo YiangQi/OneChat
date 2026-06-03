@@ -60,10 +60,22 @@ function onUrlChanged(args) {
 function onInputTextChanged(text) {
     const inputElement = document.querySelector('form #prompt-textarea');
     if (inputElement) {
+      const previousContentEditable = inputElement.getAttribute('contenteditable');
+      inputElement.setAttribute('contenteditable', 'false');
+      inputElement.blur();
+
       inputElement.innerHTML = '';
       const p = document.createElement('p');
       p.textContent = text;
       inputElement.appendChild(p);
+
+      requestAnimationFrame(() => {
+        if (previousContentEditable === null) {
+          inputElement.removeAttribute('contenteditable');
+        } else {
+          inputElement.setAttribute('contenteditable', previousContentEditable);
+        }
+      });
     }
 }
 

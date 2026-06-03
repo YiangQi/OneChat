@@ -72,10 +72,22 @@ function onUrlChanged(args) {
  * @param {string} text: all the text in the client-side input box.
  */
 function onInputTextChanged(text) {
-    const inputElement = document.querySelector('div[contenteditable=true]');
+    const inputElement = document.querySelector('div[contenteditable]');
     if (inputElement) {
+        const previousContentEditable = inputElement.getAttribute('contenteditable');
+        inputElement.setAttribute('contenteditable', 'false');
+        inputElement.blur();
+
         const p = inputElement.querySelector('p');
         p.textContent = text;
+
+        requestAnimationFrame(() => {
+            if (previousContentEditable === null) {
+                inputElement.removeAttribute('contenteditable');
+            } else {
+                inputElement.setAttribute('contenteditable', previousContentEditable);
+            }
+        });
     }
 }
 

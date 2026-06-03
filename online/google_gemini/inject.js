@@ -60,10 +60,22 @@ function onUrlChanged(args) {
 function onInputTextChanged(text) {
     const inputElement = document.querySelector('.ql-editor.textarea');
     if (inputElement) {
+        const previousContentEditable = inputElement.getAttribute('contenteditable');
+        inputElement.setAttribute('contenteditable', 'false');
+        inputElement.blur();
+
         const inputEvent = new Event('input', { bubbles: true });
         inputElement.value = text;
         inputElement.dispatchEvent(inputEvent);
         inputElement.querySelector('p').textContent = text;
+
+        requestAnimationFrame(() => {
+            if (previousContentEditable === null) {
+                inputElement.removeAttribute('contenteditable');
+            } else {
+                inputElement.setAttribute('contenteditable', previousContentEditable);
+            }
+        });
     }
 }
 

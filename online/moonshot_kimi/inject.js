@@ -61,7 +61,9 @@ function onInputTextChanged(text) {
     const editor = document.querySelector('.chat-input-editor');
     if (!editor) return;
 
-    editor.focus();
+    const previousContentEditable = editor.getAttribute('contenteditable');
+    editor.setAttribute('contenteditable', 'false');
+    editor.blur();
 
     const selection = window.getSelection();
     const range = document.createRange();
@@ -81,6 +83,14 @@ function onInputTextChanged(text) {
         bubbles: true,
         cancelable: true
     }));
+
+    requestAnimationFrame(() => {
+        if (previousContentEditable === null) {
+            editor.removeAttribute('contenteditable');
+        } else {
+            editor.setAttribute('contenteditable', previousContentEditable);
+        }
+    });
 }
 
 /**

@@ -62,7 +62,23 @@ function onUrlChanged(args) {
 function onInputTextChanged(text) {
     const inputElement = document.querySelector('div[data-testid="chat-input"] > p');
     if (inputElement) {
+        const editableRoot = inputElement.closest('[contenteditable]');
+        const previousContentEditable = editableRoot ? editableRoot.getAttribute('contenteditable') : null;
+        if (editableRoot) {
+            editableRoot.setAttribute('contenteditable', 'false');
+            editableRoot.blur();
+        }
+
         inputElement.textContent = text;
+
+        requestAnimationFrame(() => {
+            if (!editableRoot) return;
+            if (previousContentEditable === null) {
+                editableRoot.removeAttribute('contenteditable');
+            } else {
+                editableRoot.setAttribute('contenteditable', previousContentEditable);
+            }
+        });
     }
 }
 
@@ -129,7 +145,7 @@ function onLoginButtonClicked() {
     // Claude doesn't have a traditional login button in the UI
     // Users are redirected to auth.anthropic.com if not logged in
     // Check if there's a login button or link and click it
-    const loginButton = document.querySelector('a[href*="auth.anthropic.com"]') as HTMLAnchorElement;
+    const loginButton = document.querySelector('a[href*="auth.anthropic.com"]');
     if (loginButton) {
         loginButton.click();
     }

@@ -71,10 +71,15 @@ function onUrlChanged(args) {
  * @param {string} text: all the text in the client-side input box.
  */
 function onInputTextChanged(text) {
-    const editor = document.querySelector('div[contenteditable="true"] p');
+    const editor = document.querySelector('div[contenteditable] p');
     if (!editor) return;
 
-    editor.focus();
+    const editableRoot = editor.closest('[contenteditable]');
+    const previousContentEditable = editableRoot ? editableRoot.getAttribute('contenteditable') : null;
+    if (editableRoot) {
+        editableRoot.setAttribute('contenteditable', 'false');
+        editableRoot.blur();
+    }
 
     const selection = window.getSelection();
     const range = document.createRange();
@@ -95,6 +100,15 @@ function onInputTextChanged(text) {
             bubbles: true,
             cancelable: false
         }));
+
+        requestAnimationFrame(() => {
+            if (!editableRoot) return;
+            if (previousContentEditable === null) {
+                editableRoot.removeAttribute('contenteditable');
+            } else {
+                editableRoot.setAttribute('contenteditable', previousContentEditable);
+            }
+        });
     }, 10);
 }
 

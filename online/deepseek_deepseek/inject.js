@@ -78,6 +78,10 @@ function _hideScrollAreaBar() {
 function onInputTextChanged(text) {
     const inputElement = document.querySelector('textarea')
     if (inputElement) {
+        const wasReadOnly = inputElement.readOnly;
+        inputElement.readOnly = true;
+        inputElement.blur();
+
         const nativeTextareaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
         nativeTextareaSetter.call(inputElement, text);
         const inputEvent = new InputEvent('input', {
@@ -85,6 +89,10 @@ function onInputTextChanged(text) {
             cancelable: true,
         });
         inputElement.dispatchEvent(inputEvent);
+
+        requestAnimationFrame(() => {
+            inputElement.readOnly = wasReadOnly;
+        });
     }
 }
 

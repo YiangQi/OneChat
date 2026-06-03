@@ -73,8 +73,10 @@ function onInputTextChanged(text) {
     console.log('[Doubao] onInputTextChanged called:', text);
     const inputElement = document.querySelector('textarea.semi-input-textarea')
     if (inputElement) {
-        inputElement.focus();
-
+        const wasReadOnly = inputElement.readOnly;
+        inputElement.readOnly = true;
+        inputElement.blur();
+        
         const nativeTextareaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
         nativeTextareaSetter.call(inputElement, text);
 
@@ -87,6 +89,10 @@ function onInputTextChanged(text) {
         // 触发 change 事件以确保值被正确设置
         const changeEvent = new Event('change', { bubbles: true });
         inputElement.dispatchEvent(changeEvent);
+
+        requestAnimationFrame(() => {
+            inputElement.readOnly = wasReadOnly;
+        });
     }
 }
 
