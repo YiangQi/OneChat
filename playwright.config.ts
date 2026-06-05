@@ -11,7 +11,7 @@ import { defineConfig } from '@playwright/test'
  * E2E_SKIP_BUILD=1 npm run test:e2e
  */
 export default defineConfig({
-  testDir: './tests/e2e',
+  testDir: './tests/e2e/specs',
   fullyParallel: false,
   retries: process.env.CI ? 2 : 1,
   reporter: [['html'], ['list']],
