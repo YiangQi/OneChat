@@ -19,6 +19,7 @@ function onLoadEnded(args) {
         console.log('onLoadEnded timer run')
         if (maxCnt-- < 0) {
             clearInterval(timerId);
+            releaseInitialInputContext();
             invokeBrowserMethod("webLoadEnded");
         }
         if (onInputBoxVisibleChanged(args.isInputBoxVisible) 
@@ -29,9 +30,29 @@ function onLoadEnded(args) {
                 }, 1000);
             }
             clearInterval(timerId);
+            releaseInitialInputContext();
             invokeBrowserMethod("webLoadEnded");
         }
     }, 100);
+}
+
+function releaseInitialInputContext() {
+    requestAnimationFrame(() => {
+        const activeElement = document.activeElement;
+        if (activeElement && typeof activeElement.blur === 'function') {
+            activeElement.blur();
+        }
+
+        const inputElement = document.querySelector('textarea.semi-input-textarea');
+        if (!inputElement) return;
+
+        inputElement.readOnly = true;
+        inputElement.blur();
+
+        requestAnimationFrame(() => {
+            inputElement.readOnly = false;
+        });
+    });
 }
 
 /**
